@@ -1,0 +1,14 @@
+node_modules
+dist
+.env
+.env.local
+.env.*
+.env.*.local
+*.local
+*.log
+
+!.env.example
+
+supabase/.branches
+supabase/.temp
+supabase/.cache

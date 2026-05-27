@@ -1,0 +1,4 @@
+project_id = "creato"
+
+[functions.process-generation]
+verify_jwt = true
