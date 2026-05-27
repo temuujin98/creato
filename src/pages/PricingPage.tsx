@@ -1,4 +1,3 @@
-import { Link } from "react-router-dom";
 import { Footer } from "../components/layout/Footer";
 import { Navbar } from "../components/layout/Navbar";
 import { pricingPackages } from "../data/pricing";
@@ -22,9 +21,6 @@ export function PricingPage() {
             </h1>
             <p className="mt-6 text-lg leading-8 text-white/62">
               {t.pricing.description}
-            </p>
-            <p className="mt-8 inline-flex rounded-full border border-white/12 bg-white/[0.04] px-5 py-3 text-sm font-semibold text-white">
-              {t.pricing.unit}
             </p>
           </div>
 
@@ -52,12 +48,6 @@ export function PricingPage() {
             ))}
           </div>
 
-          <Link
-            to="/"
-            className="mt-10 inline-flex rounded-full border border-white/14 bg-white/[0.04] px-5 py-3 text-sm font-semibold text-white transition hover:border-white/28 hover:bg-white/[0.08]"
-          >
-            {t.pricing.cta}
-          </Link>
         </section>
       </main>
       <Footer />

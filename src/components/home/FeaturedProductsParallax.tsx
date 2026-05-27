@@ -79,7 +79,7 @@ export function FeaturedProductsParallax() {
           </p>
           <h2 className="mt-4 text-5xl font-semibold tracking-normal text-white sm:text-7xl">
             {t.parallax.heading.replace(t.parallax.emphasized, "")}
-            <span className="italic text-white/74">{t.parallax.emphasized}</span>
+            <span className="text-white/74">{t.parallax.emphasized}</span>
           </h2>
           <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-white/62">
             {t.parallax.subtext}

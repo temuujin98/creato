@@ -72,7 +72,6 @@ export function RegisterPage() {
       <main>
         <AuthCard
           title={t.auth.registerTitle}
-          subtitle={t.auth.registerSubtitle}
           notice={t.auth.registerNotice}
         >
           <form className="grid gap-4" onSubmit={handleSubmit}>

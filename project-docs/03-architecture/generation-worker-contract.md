@@ -341,3 +341,41 @@ Every processed generation should preserve:
 - Error details when applicable.
 
 This keeps `creato` debuggable and financially auditable without exposing prompt or provider internals.
+
+## Phase 14D Frontend Trigger And Polling
+
+The generate page now invokes the `process-generation` Edge Function after the frontend has reserved credits, created the generation record, saved `generation_inputs`, and moved the row to `queued`/`processing`.
+
+Frontend request contract:
+
+```json
+{
+  "generationId": "uuid",
+  "dryRun": false
+}
+```
+
+The frontend sends only the generation id and the current authenticated Supabase bearer token. It never sends prompt text, model names, provider config, uploaded image bytes, storage paths, API keys, or wallet settlement instructions.
+
+After invocation, the frontend polls `generations` for safe fields only:
+
+- `id`
+- `status`
+- `error_code`
+- `error_message`
+- `completed_at`
+- `updated_at`
+- `credit_cost`
+
+Polling stops when the status reaches `completed`, `failed`, `credit_spent`, `credit_refunded`, or `canceled`, or when the bounded polling window expires.
+
+## Phase 14E Signed Output Preview
+
+When polling reaches `completed`, the frontend loads completed generation outputs through a safe client-side preview flow:
+
+1. Verify the authenticated user owns the completed generation.
+2. Query `generation_outputs` for the generation.
+3. Create temporary signed URLs from the private `generation-outputs` bucket.
+4. Render image previews and download links.
+
+The UI does not display storage paths, prompt text, model/provider configuration, raw provider responses, or service-role-only data. Signed URLs are temporary and should be treated as bearer URLs. A full My Images gallery remains a later phase.

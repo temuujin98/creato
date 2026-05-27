@@ -1,12 +1,15 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AlertCircle, CheckCircle, Clock, LoaderCircle } from "lucide-react";
 import type { Product } from "../../data/products";
 import type { Language } from "../../i18n/translations";
 import {
   createGenerationRecord,
+  getGenerationStatus,
   markGenerationProcessing,
   markGenerationQueued,
+  type GenerationStatus,
 } from "../../lib/generations";
+import { processGeneration } from "../../lib/processGeneration";
 import {
   refundReservedCredits,
   reserveCredits,
@@ -20,6 +23,7 @@ import {
 
 type GenerateFormLabels = {
   aiGenerationNextPhase: string;
+  edgeFunctionCallFailed: string;
   clickToUpload: string;
   createFailed: string;
   createGenerationRecord: string;
@@ -29,6 +33,8 @@ type GenerateFormLabels = {
   fileTooLarge: string;
   filesReady: string;
   generationId: string;
+  generationCompleted: string;
+  generationFailed: string;
   generationRecordCreated: string;
   generationPending: string;
   insufficientCredits: string;
@@ -51,10 +57,18 @@ type GenerateFormLabels = {
   reserveAndCreate: string;
   reserveFailed: string;
   reserveSuccess: string;
+  pollingStatus: string;
+  processGenerationFailed: string;
+  processingGeneration: string;
+  retryingStatus: string;
+  safeErrorMessage: string;
   selected: string;
   statusAddedToQueue: string;
+  statusAiBackendCalled: string;
   statusAiBackendPending: string;
+  statusCompleted: string;
   statusCreditReserved: string;
+  statusFailed: string;
   statusMovedToProcessing: string;
   statusProcessingPlaceholder: string;
   statusQueueFailed: string;
@@ -79,8 +93,11 @@ type GenerateFormProps = {
   labels: GenerateFormLabels;
   language: Language;
   product: Product;
+  onGenerationIdChange?: (generationId: string | null) => void;
   onWalletChange?: (wallet: Wallet) => void;
-  onStatusChange?: (status: "idle" | "queued" | "processing") => void;
+  onStatusChange?: (
+    status: "idle" | "queued" | "processing" | "completed" | "failed",
+  ) => void;
   userId?: string;
   wallet: Wallet | null;
   walletError?: string | null;
@@ -91,6 +108,7 @@ export function GenerateForm({
   labels,
   language,
   onWalletChange,
+  onGenerationIdChange,
   onStatusChange,
   product,
   userId,
@@ -117,12 +135,22 @@ export function GenerateForm({
   );
   const [createError, setCreateError] = useState<string | null>(null);
   const [timeline, setTimeline] = useState({
+    aiBackendCalled: false,
+    completed: false,
     creditReserved: false,
+    failed: false,
     processing: false,
     queueFailed: false,
     queued: false,
     recordCreated: false,
   });
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const uploadedReadyFiles = uploadedFiles.filter(
     (file) => file.status === "uploaded" && file.storagePath,
@@ -168,15 +196,67 @@ export function GenerateForm({
     uploadingCount === 0 &&
     hasRequiredUploads &&
     missingRequiredOptions.length === 0 &&
+    !createdGenerationId &&
     !isCreating;
+
+  async function pollGenerationUntilTerminal(generationId: string) {
+    const terminalStatuses = new Set<GenerationStatus>([
+      "completed",
+      "failed",
+      "credit_spent",
+      "credit_refunded",
+      "canceled",
+    ]);
+
+    for (let attempt = 0; attempt < 24; attempt += 1) {
+      const statusRecord = await getGenerationStatus(generationId);
+
+      if (!mountedRef.current) return statusRecord;
+
+      if (statusRecord.status === "completed" || statusRecord.status === "credit_spent") {
+        setTimeline((current) => ({ ...current, completed: true }));
+        onStatusChange?.("completed");
+        return statusRecord;
+      }
+
+      if (
+        statusRecord.status === "failed" ||
+        statusRecord.status === "credit_refunded" ||
+        statusRecord.status === "canceled"
+      ) {
+        setTimeline((current) => ({ ...current, failed: true }));
+        onStatusChange?.("failed");
+        return statusRecord;
+      }
+
+      if (statusRecord.status === "processing") {
+        setTimeline((current) => ({ ...current, processing: true }));
+        onStatusChange?.("processing");
+      }
+
+      if (statusRecord.status === "queued") {
+        setTimeline((current) => ({ ...current, queued: true }));
+        onStatusChange?.("queued");
+      }
+
+      if (terminalStatuses.has(statusRecord.status)) return statusRecord;
+      await new Promise((resolve) => setTimeout(resolve, 2500));
+    }
+
+    return null;
+  }
 
   async function handleCreateGeneration() {
     if (!userId || !product.dbProductId || !wallet || !canCreate) return;
 
     setCreateError(null);
     setCreatedGenerationId(null);
+    onGenerationIdChange?.(null);
     setTimeline({
+      aiBackendCalled: false,
+      completed: false,
       creditReserved: false,
+      failed: false,
       processing: false,
       queueFailed: false,
       queued: false,
@@ -212,7 +292,10 @@ export function GenerateForm({
         userId,
       });
       setCreatedGenerationId(result.generationId);
+      onGenerationIdChange?.(result.generationId);
       setTimeline((current) => ({ ...current, recordCreated: true }));
+
+      let didCallEdgeFunction = false;
 
       try {
         await markGenerationQueued(result.generationId, userId);
@@ -222,9 +305,46 @@ export function GenerateForm({
         await markGenerationProcessing(result.generationId, userId);
         setTimeline((current) => ({ ...current, processing: true }));
         onStatusChange?.("processing");
+
+        didCallEdgeFunction = true;
+        setTimeline((current) => ({ ...current, aiBackendCalled: true }));
+        let processResponse = await processGeneration(result.generationId);
+
+        if (!processResponse.ok) {
+          await new Promise((resolve) => setTimeout(resolve, 900));
+          processResponse = await processGeneration(result.generationId);
+        }
+
+        const terminalStatus = await pollGenerationUntilTerminal(result.generationId);
+
+        if (processResponse.ok || terminalStatus?.status === "completed") {
+          setTimeline((current) => ({ ...current, completed: true }));
+          onStatusChange?.("completed");
+        } else if (
+          terminalStatus?.status === "failed" ||
+          terminalStatus?.status === "credit_refunded" ||
+          terminalStatus?.status === "canceled"
+        ) {
+          setTimeline((current) => ({ ...current, failed: true }));
+          onStatusChange?.("failed");
+          setCreateError(
+            terminalStatus.error_message || labels.processGenerationFailed,
+          );
+        } else if (!processResponse.ok) {
+          setCreateError(processResponse.message || labels.processGenerationFailed);
+        }
       } catch {
-        setTimeline((current) => ({ ...current, queueFailed: true }));
-        setCreateError(labels.statusQueueFailed);
+        setTimeline((current) => ({
+          ...current,
+          failed: didCallEdgeFunction,
+          queueFailed: !didCallEdgeFunction,
+        }));
+        onStatusChange?.("failed");
+        setCreateError(
+          didCallEdgeFunction
+            ? labels.edgeFunctionCallFailed
+            : labels.statusQueueFailed,
+        );
       }
     } catch {
       if (didReserve) {
@@ -307,7 +427,7 @@ export function GenerateForm({
           className="mt-5 inline-flex w-full items-center justify-center rounded-full bg-white px-5 py-3 text-sm font-semibold text-black transition hover:-translate-y-0.5 hover:bg-white/90 disabled:cursor-not-allowed disabled:bg-white/18 disabled:text-white/42"
           onClick={handleCreateGeneration}
         >
-          {isCreating ? labels.uploading : labels.reserveAndCreate}
+          {isCreating ? labels.processingGeneration : labels.reserveAndCreate}
         </button>
 
         {createdGenerationId ? (
@@ -323,6 +443,13 @@ export function GenerateForm({
             </p>
             <p className="mt-2 text-sm leading-6 text-white/48">
               {labels.reserveSuccess}
+            </p>
+            <p className="mt-2 text-sm leading-6 text-white/48">
+              {timeline.completed
+                ? labels.generationCompleted
+                : timeline.failed
+                  ? labels.generationFailed
+                  : labels.pollingStatus}
             </p>
           </div>
         ) : null}
@@ -346,12 +473,27 @@ export function GenerateForm({
             label={labels.statusMovedToProcessing}
           />
           <TimelineItem
-            complete={false}
-            icon={timeline.queueFailed ? "alert" : "clock"}
+            complete={timeline.aiBackendCalled}
+            icon={timeline.aiBackendCalled && !timeline.completed ? "loader" : "clock"}
+            label={labels.statusAiBackendCalled}
+          />
+          <TimelineItem
+            complete={timeline.completed}
+            icon={
+              timeline.queueFailed || timeline.failed
+                ? "alert"
+                : timeline.completed
+                  ? undefined
+                  : "clock"
+            }
             label={
               timeline.queueFailed
                 ? labels.statusQueueFailed
-                : labels.statusAiBackendPending
+                : timeline.failed
+                  ? labels.statusFailed
+                  : timeline.completed
+                    ? labels.statusCompleted
+                    : labels.statusAiBackendPending
             }
           />
         </div>

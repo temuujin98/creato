@@ -15,9 +15,39 @@ export type CreateGenerationRecordInput = {
   userId: string;
 };
 
+export type GenerationStatus =
+  | "created"
+  | "credit_reserved"
+  | "queued"
+  | "processing"
+  | "completed"
+  | "failed"
+  | "credit_spent"
+  | "credit_refunded"
+  | "canceled";
+
+export type GenerationStatusRecord = {
+  completed_at: string | null;
+  credit_cost: number;
+  error_code: string | null;
+  error_message: string | null;
+  id: string;
+  status: GenerationStatus;
+  updated_at: string | null;
+};
+
 function serializeOptionValue(value: GenerationOptionValue) {
   return typeof value === "string" ? value : JSON.stringify(value);
 }
+
+type GenerationInputInsertRow = {
+  generation_id: string;
+  input_type: "upload" | "option";
+  metadata: Record<string, unknown>;
+  option_key: string | null;
+  option_value: string | null;
+  storage_path: string | null;
+};
 
 export async function createGenerationRecord({
   creditCost,
@@ -49,22 +79,26 @@ export async function createGenerationRecord({
     throw new Error("Could not create generation record.");
   }
 
-  const inputRows = [
+  const inputRows: GenerationInputInsertRow[] = [
     ...uploadedFiles.map((file) => ({
       generation_id: generation.id,
-      input_type: "upload",
+      input_type: "upload" as const,
       metadata: {
         fileName: file.fileName,
         mimeType: file.mimeType,
         size: file.size,
       },
+      option_key: null,
+      option_value: null,
       storage_path: file.storagePath,
     })),
     ...Object.entries(optionValues).map(([key, value]) => ({
       generation_id: generation.id,
-      input_type: "option",
+      input_type: "option" as const,
+      metadata: {},
       option_key: key,
       option_value: serializeOptionValue(value),
+      storage_path: null,
     })),
   ];
 
@@ -128,4 +162,22 @@ export function markGenerationProcessing(generationId: string, userId: string) {
     status: "processing",
     userId,
   });
+}
+
+export async function getGenerationStatus(generationId: string) {
+  if (!supabase) {
+    throw new Error("Supabase is not configured.");
+  }
+
+  const { data, error } = await supabase
+    .from("generations")
+    .select("id,status,error_code,error_message,completed_at,updated_at,credit_cost")
+    .eq("id", generationId)
+    .single<GenerationStatusRecord>();
+
+  if (error || !data) {
+    throw new Error("Could not load generation status.");
+  }
+
+  return data;
 }

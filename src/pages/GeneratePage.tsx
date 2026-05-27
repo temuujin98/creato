@@ -18,8 +18,9 @@ export function GeneratePage() {
   const [walletLoading, setWalletLoading] = useState(false);
   const [walletError, setWalletError] = useState<string | null>(null);
   const [generationStatus, setGenerationStatus] = useState<
-    "idle" | "queued" | "processing"
+    "idle" | "queued" | "processing" | "completed" | "failed"
   >("idle");
+  const [generationId, setGenerationId] = useState<string | null>(null);
   const { productSlug } = useParams();
   const { language, t } = useLanguage();
   const product = productSlug ? getProductBySlug(productSlug) : undefined;
@@ -121,6 +122,7 @@ export function GeneratePage() {
                   userId={user?.id}
                   labels={{
                     aiGenerationNextPhase: t.generate.aiGenerationNextPhase,
+                    edgeFunctionCallFailed: t.generate.edgeFunctionCallFailed,
                     clickToUpload: t.generate.clickToUpload,
                     createFailed: t.generate.createFailed,
                     createGenerationRecord: t.generate.createGenerationRecord,
@@ -130,6 +132,8 @@ export function GeneratePage() {
                     fileTooLarge: t.generate.fileTooLarge,
                     filesReady: t.generate.filesReady,
                     generationId: t.generate.generationId,
+                    generationCompleted: t.generate.generationCompleted,
+                    generationFailed: t.generate.generationFailed,
                     generationRecordCreated: t.generate.generationRecordCreated,
                     generationPending: t.generate.generationPending,
                     insufficientCredits: t.generate.insufficientCredits,
@@ -152,10 +156,18 @@ export function GeneratePage() {
                     reserveAndCreate: t.generate.reserveAndCreate,
                     reserveFailed: t.generate.reserveFailed,
                     reserveSuccess: t.generate.reserveSuccess,
+                    pollingStatus: t.generate.pollingStatus,
+                    processGenerationFailed: t.generate.processGenerationFailed,
+                    processingGeneration: t.generate.processingGeneration,
+                    retryingStatus: t.generate.retryingStatus,
+                    safeErrorMessage: t.generate.safeErrorMessage,
                     selected: t.generate.selected,
                     statusAddedToQueue: t.generate.statusAddedToQueue,
+                    statusAiBackendCalled: t.generate.statusAiBackendCalled,
                     statusAiBackendPending: t.generate.statusAiBackendPending,
+                    statusCompleted: t.generate.statusCompleted,
                     statusCreditReserved: t.generate.statusCreditReserved,
+                    statusFailed: t.generate.statusFailed,
                     statusMovedToProcessing: t.generate.statusMovedToProcessing,
                     statusProcessingPlaceholder: t.generate.statusProcessingPlaceholder,
                     statusQueueFailed: t.generate.statusQueueFailed,
@@ -178,6 +190,7 @@ export function GeneratePage() {
                   wallet={wallet}
                   walletError={walletError}
                   walletLoading={walletLoading}
+                  onGenerationIdChange={setGenerationId}
                   onWalletChange={setWallet}
                   onStatusChange={setGenerationStatus}
                 />
@@ -224,6 +237,18 @@ export function GeneratePage() {
                 status={generationStatus}
                 pendingTitle={t.generate.aiBackendPending}
                 pendingDescription={t.generate.workerNotConnected}
+                completedTitle={t.generate.outputSaved}
+                completedDescription={t.generate.outputPreviewNextPhase}
+                downloadLabel={t.generate.downloadOutput}
+                failedTitle={t.generate.generationFailed}
+                failedDescription={t.generate.safeErrorMessage}
+                generatedAtLabel={t.generate.generatedAt}
+                generationId={generationId}
+                loadingOutputLabel={t.generate.loadingOutputImage}
+                noOutputLabel={t.generate.noOutputFound}
+                outputPreviewFailedLabel={t.generate.outputPreviewFailed}
+                previewExpiresNote={t.generate.previewExpiresNote}
+                signedUrlFailedLabel={t.generate.signedUrlFailed}
               />
 
               <p className="text-center text-sm leading-6 text-white/42">

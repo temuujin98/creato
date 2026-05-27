@@ -57,7 +57,6 @@ export function LoginPage() {
       <main>
         <AuthCard
           title={t.auth.loginTitle}
-          subtitle={t.auth.loginSubtitle}
           notice={t.auth.loginNotice}
         >
           <form className="grid gap-4" onSubmit={handleSubmit}>

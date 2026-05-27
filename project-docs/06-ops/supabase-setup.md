@@ -299,7 +299,39 @@ Phase 14C-B implements the Gemini adapter in the Edge Function. Required setup b
 - Active prompt version and active model config exist for the product.
 - Test user has enough reserved credits through the normal generate flow.
 
-The function response does not include signed output URLs yet. A later frontend phase should add status polling and protected signed URL retrieval.
+Phase 14D adds frontend invocation and bounded polling. The browser calls `process-generation` with only `generationId` and the authenticated bearer token, then polls safe `generations` fields until the job completes, fails, or times out.
+
+Phase 14E adds protected signed URL retrieval for completed outputs. The browser first verifies generation ownership, then queries `generation_outputs`, then creates temporary signed URLs from the private `generation-outputs` bucket for preview and download. Storage paths are not shown in the UI.
+
+A full My Images gallery/history workflow remains a future phase.
+
+## Gemini Key Pending Checklist
+
+Current production-like readiness can be verified before a Gemini key exists:
+
+- Migrations through `0007_wallet_rpc_service_role_auth_patch.sql` are applied.
+- `process-generation` is deployed with JWT verification enabled.
+- `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are configured as Edge Function secrets.
+- `GEMINI_API_KEY` remains pending and must be added only as an Edge Function secret.
+- `clean-studio-product-shot` has an active prompt version and active model config.
+- `user-uploads` and `generation-outputs` buckets exist and remain private.
+- Wallet reserve/refund smoke tests pass and leave the wallet balance unchanged.
+
+When the Gemini key is available:
+
+```bash
+supabase secrets set GEMINI_API_KEY=...
+supabase functions deploy process-generation
+```
+
+Then run one internal real generation test and verify:
+
+- `process-generation` no longer returns `provider_auth_error`.
+- Output is stored in the private `generation-outputs` bucket.
+- A `generation_outputs` row is inserted.
+- Generation status becomes `completed`.
+- `spend_reserved_credits` runs with `spend:{generationId}`.
+- The frontend preview loads through a temporary signed URL.
 
 ## Security Checklist
 

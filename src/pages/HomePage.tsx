@@ -5,7 +5,6 @@ import { Navbar } from "../components/layout/Navbar";
 import { FaqSection } from "../components/home/FaqSection";
 import { FeaturedCategories } from "../components/home/FeaturedCategories";
 import { FeaturedProductsParallax } from "../components/home/FeaturedProductsParallax";
-import { FinalCta } from "../components/home/FinalCta";
 import { HeroSection } from "../components/home/HeroSection";
 import { HowItWorks } from "../components/home/HowItWorks";
 import { ShowcaseSection } from "../components/home/ShowcaseSection";
@@ -38,7 +37,6 @@ export function HomePage() {
           <WhyCreato />
           <ShowcaseSection />
           <FaqSection />
-          <FinalCta />
         </main>
         <Footer />
       </div>
