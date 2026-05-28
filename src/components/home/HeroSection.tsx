@@ -7,11 +7,11 @@ export function HeroSection() {
   return (
     <section
       id="top"
-      className="relative isolate flex min-h-screen items-center justify-center overflow-hidden bg-black px-4 pb-20 pt-28 sm:px-6 lg:px-8"
+      className="theme-cinematic relative isolate flex min-h-screen items-center justify-center overflow-hidden bg-black px-4 pb-20 pt-28 sm:px-6 lg:px-8"
     >
       <BackgroundVideo className="z-0" />
       <div className="absolute inset-0 z-[1] bg-black/24" />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] h-40 bg-gradient-to-b from-transparent to-[#050505] md:h-56" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] h-48 bg-gradient-to-b from-transparent via-black/45 to-black md:h-64" />
 
       <div className="relative z-10 mx-auto max-w-[980px] text-center">
         <h1

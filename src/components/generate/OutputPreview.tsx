@@ -113,14 +113,14 @@ export function OutputPreview({
   })();
 
   return (
-    <section className="rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-6">
+    <section className="rounded-[1.75rem] border border-white/10 bg-neutral-950 p-6">
       <p className="text-lg font-semibold text-white">{title}</p>
       <div className="mt-5 rounded-[1.35rem] border border-dashed border-white/14 bg-black/36 p-4 text-center">
         {isCompleted && outputLoading ? (
           <div className="flex aspect-square items-center justify-center">
             <div>
               <LoaderCircle
-                className="mx-auto h-9 w-9 animate-spin text-white/48"
+                className="mx-auto h-9 w-9 animate-spin text-primary-300"
                 aria-hidden="true"
               />
               <p className="mt-4 text-sm font-semibold text-white/62">
@@ -131,7 +131,7 @@ export function OutputPreview({
         ) : isCompleted && outputError ? (
           <div className="flex aspect-square items-center justify-center">
             <div>
-              <AlertCircle className="mx-auto h-9 w-9 text-white/54" aria-hidden="true" />
+              <AlertCircle className="mx-auto h-9 w-9 text-red-300" aria-hidden="true" />
               <p className="mt-4 text-sm font-semibold text-white/62">
                 {outputError}
               </p>
@@ -197,8 +197,8 @@ export function OutputPreview({
             <div>
               <StateIcon
                 className={`mx-auto h-9 w-9 ${
-                  isCompleted
-                    ? "text-white"
+                    isCompleted
+                    ? "text-primary-300"
                     : isFailed
                       ? "text-white/64"
                       : "text-white/42"

@@ -10,12 +10,15 @@ import { ProductDetailPage } from "../pages/ProductDetailPage";
 import { ProductsPage } from "../pages/ProductsPage";
 import { PricingPage } from "../pages/PricingPage";
 import { RegisterPage } from "../pages/RegisterPage";
-import { AdminCategoriesPage } from "../pages/admin/AdminCategoriesPage";
-import { AdminCreditPackagesPage } from "../pages/admin/AdminCreditPackagesPage";
-import { AdminDashboardPage } from "../pages/admin/AdminDashboardPage";
-import { AdminGenerationsPage } from "../pages/admin/AdminGenerationsPage";
-import { AdminProductEditorPage } from "../pages/admin/AdminProductEditorPage";
-import { AdminProductsPage } from "../pages/admin/AdminProductsPage";
+import { SettingsPage } from "../pages/SettingsPage";
+import { AdminCategoriesPage } from "../pages/admin/categories";
+import { AdminCreditPackagesPage } from "../pages/admin/credit-packages";
+import { AdminDashboardPage } from "../pages/admin/dashboard";
+import { AdminGenerationsPage } from "../pages/admin/generations";
+import {
+  AdminPresetEditorPage,
+  AdminPresetsPage,
+} from "../pages/admin/presets";
 
 export function AppRouter() {
   return (
@@ -44,6 +47,14 @@ export function AppRouter() {
         }
       />
       <Route
+        path="/settings"
+        element={
+          <ProtectedRoute>
+            <SettingsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/admin"
         element={
           <ProtectedRoute requireAdmin>
@@ -53,9 +64,9 @@ export function AppRouter() {
       >
         <Route index element={<AdminDashboardPage />} />
         <Route path="categories" element={<AdminCategoriesPage />} />
-        <Route path="products" element={<AdminProductsPage />} />
-        <Route path="products/new" element={<AdminProductEditorPage />} />
-        <Route path="products/:id" element={<AdminProductEditorPage />} />
+        <Route path="products" element={<AdminPresetsPage />} />
+        <Route path="products/new" element={<AdminPresetEditorPage />} />
+        <Route path="products/:id" element={<AdminPresetEditorPage />} />
         <Route path="credit-packages" element={<AdminCreditPackagesPage />} />
         <Route path="generations" element={<AdminGenerationsPage />} />
       </Route>

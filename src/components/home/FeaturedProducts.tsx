@@ -8,7 +8,7 @@ export function FeaturedProducts() {
     <section id="products" className="bg-black px-4 py-20 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
         <div className="max-w-2xl">
-          <p className="text-sm font-semibold uppercase text-electric">{t.products.eyebrow}</p>
+          <p className="text-sm font-semibold uppercase text-primary">{t.products.eyebrow}</p>
           <h2 className="mt-3 text-3xl font-semibold text-white sm:text-4xl">
             {t.products.title}
           </h2>

@@ -5,11 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="creato бол Монгол бизнест зориулсан AI creative studio."
+      content="creato bol Mongol biznest zoriulsan AI creative studio."
     />
+    <link rel="icon" type="image/png" href="/favicon.png" />
     <title>creato | AI Creative Studio</title>
   </head>
   <body>
+    <script>
+      (() => {
+        try {
+          document.documentElement.classList.add("dark");
+          document.documentElement.style.colorScheme = "dark";
+        } catch {
+          document.documentElement.classList.add("dark");
+        }
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

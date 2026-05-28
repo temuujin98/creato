@@ -31,7 +31,7 @@ export function OptionField({
   );
 
   return (
-    <label className="block rounded-[1.35rem] border border-white/10 bg-white/[0.025] p-4">
+    <label className="block rounded-[1.35rem] border border-white/10 bg-black/35 p-4">
       {label}
       {field.helpText ? (
         <p className="mt-2 text-sm leading-6 text-white/48">

@@ -1,8 +1,8 @@
-import { CreditCard, Images, Users, XCircle } from "lucide-react";
-import { AdminMetricCard } from "../../components/admin/AdminMetricCard";
-import { AdminNotice } from "../../components/admin/AdminNotice";
-import { AdminPageHeader } from "../../components/admin/AdminPageHeader";
-import { useLanguage } from "../../hooks/useLanguage";
+import { CreditCard, Images, ShieldAlert, Users, XCircle } from "lucide-react";
+import { AdminMetricCard } from "../../../components/admin/AdminMetricCard";
+import { AdminNotice } from "../../../components/admin/AdminNotice";
+import { AdminPageHeader } from "../../../components/admin/AdminPageHeader";
+import { useLanguage } from "../../../hooks/useLanguage";
 
 export function AdminDashboardPage() {
   const { t } = useLanguage();
@@ -33,7 +33,11 @@ export function AdminDashboardPage() {
           </section>
         ))}
       </div>
-      <div className="mt-6">
+      <div className="mt-6 grid gap-3">
+        <div className="flex items-start gap-3 rounded-2xl border border-amber-500/25 bg-amber-500/[0.08] px-4 py-3 text-sm leading-6 text-amber-200/80">
+          <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" aria-hidden="true" />
+          <span>{t.admin.dashboard.realAiNotice}</span>
+        </div>
         <AdminNotice>{t.admin.dashboard.notice}</AdminNotice>
       </div>
     </div>

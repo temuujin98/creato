@@ -22,7 +22,7 @@ export function CategoryFilter({
         type="button"
         className={`shrink-0 rounded-full border px-4 py-2 text-sm font-semibold transition ${
           activeCategory === "all"
-            ? "border-white bg-white text-black"
+            ? "border-primary bg-primary text-white shadow-lg shadow-primary/20"
             : "border-white/12 bg-white/[0.035] text-white/62 hover:border-white/24 hover:text-white"
         }`}
         onClick={() => onChange("all")}
@@ -35,7 +35,7 @@ export function CategoryFilter({
           type="button"
           className={`shrink-0 rounded-full border px-4 py-2 text-sm font-semibold transition ${
             activeCategory === category.slug
-              ? "border-white bg-white text-black"
+              ? "border-primary bg-primary text-white shadow-lg shadow-primary/20"
               : "border-white/12 bg-white/[0.035] text-white/62 hover:border-white/24 hover:text-white"
           }`}
           onClick={() => onChange(category.slug)}

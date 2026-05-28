@@ -6,7 +6,7 @@ export function FeaturedCategories() {
   const { language, t } = useLanguage();
 
   return (
-    <section className="border-y border-white/10 bg-black/82 px-4 py-20 backdrop-blur-sm sm:px-6 lg:px-8">
+    <section className="border-y border-white/10 bg-black px-4 py-20 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
         <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
           <div className="max-w-2xl">

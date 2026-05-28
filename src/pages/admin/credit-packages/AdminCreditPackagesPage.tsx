@@ -1,11 +1,11 @@
 import { CreditCard } from "lucide-react";
-import { AdminNotice } from "../../components/admin/AdminNotice";
-import { AdminPageHeader } from "../../components/admin/AdminPageHeader";
-import { AdminTable } from "../../components/admin/AdminTable";
-import { StatusBadge } from "../../components/admin/StatusBadge";
-import { creditUnitPrice, pricingPackages } from "../../data/pricing";
-import { useLanguage } from "../../hooks/useLanguage";
-import { formatCurrency } from "../../lib/format";
+import { AdminNotice } from "../../../components/admin/AdminNotice";
+import { AdminPageHeader } from "../../../components/admin/AdminPageHeader";
+import { AdminTable } from "../../../components/admin/AdminTable";
+import { StatusBadge } from "../../../components/admin/StatusBadge";
+import { creditUnitPrice, pricingPackages } from "../../../data/pricing";
+import { useLanguage } from "../../../hooks/useLanguage";
+import { formatCurrency } from "../../../lib/format";
 
 export function AdminCreditPackagesPage() {
   const { t } = useLanguage();

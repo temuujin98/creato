@@ -36,9 +36,9 @@ export function CreditSummary({
   })();
 
   return (
-    <section className="rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-6">
+    <section className="rounded-[1.75rem] border border-white/10 bg-neutral-950 p-6">
       <div className="flex items-center gap-3">
-        <Sparkles className="h-5 w-5 text-white/52" aria-hidden="true" />
+        <Sparkles className="h-5 w-5 text-primary-300" aria-hidden="true" />
         <p className="text-lg font-semibold text-white">{labels.creditSummary}</p>
       </div>
       <div className="mt-5 grid gap-3 text-sm">
@@ -60,7 +60,7 @@ export function CreditSummary({
           <span className="text-white/52">{labels.afterReserve}</span>
           <span className="font-semibold text-white">{afterReserve}</span>
         </div>
-        <p className="text-white/58">{status}</p>
+        <p className="text-white/62">{status}</p>
         {walletError ? (
           <p className="leading-6 text-white/42">{walletError}</p>
         ) : null}

@@ -33,7 +33,9 @@ This folder tracks product, design, architecture, and decision documentation for
 ## Supabase Planning
 
 - [`06-ops/supabase-setup.md`](../06-ops/supabase-setup.md): Supabase setup plan, environment variables, migration order, storage setup, and security checklist.
-- [`06-ops/ai-generation-test-checklist.md`](../06-ops/ai-generation-test-checklist.md): Future AI generation preflight and settlement test checklist.
+- [`06-ops/ai-generation-test-checklist.md`](../06-ops/ai-generation-test-checklist.md): Full AI generation preflight and settlement test checklist.
+- [`06-ops/gemini-billing-and-test-mode.md`](../06-ops/gemini-billing-and-test-mode.md): Gemini billing model, ENABLE_REAL_AI_GENERATION procedure, and one-controlled-test runbook.
+- [`06-ops/social-login-setup.md`](../06-ops/social-login-setup.md): Google and Facebook OAuth setup guide, redirect URL config, and security rules.
 - [`../../supabase/migrations/0001_initial_schema.sql`](../../supabase/migrations/0001_initial_schema.sql): Initial schema draft.
 - [`../../supabase/migrations/0002_rls_policies.sql`](../../supabase/migrations/0002_rls_policies.sql): RLS policy draft.
 - [`../../supabase/migrations/0003_storage_policies.sql`](../../supabase/migrations/0003_storage_policies.sql): Storage bucket and policy draft.

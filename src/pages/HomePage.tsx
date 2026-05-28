@@ -25,7 +25,7 @@ export function HomePage() {
   }, [location.hash]);
 
   return (
-    <div className="relative overflow-hidden bg-ink">
+    <div className="relative overflow-hidden bg-black">
       <div className="relative z-10">
         <Navbar />
         <main>

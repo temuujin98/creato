@@ -2,6 +2,7 @@ import { createContext } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 
 export type AuthProfile = {
+  avatar_url: string | null;
   email: string | null;
   full_name: string | null;
   id: string;

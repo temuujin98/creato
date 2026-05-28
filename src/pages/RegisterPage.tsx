@@ -30,17 +30,14 @@ export function RegisterPage() {
       setError(t.auth.missingFields);
       return;
     }
-
     if (password.length < 6) {
       setError(t.auth.passwordTooShort);
       return;
     }
-
     if (password !== confirmPassword) {
       setError(t.auth.passwordMismatch);
       return;
     }
-
     if (configError) {
       setError(t.auth.missingConfig);
       return;
@@ -54,16 +51,13 @@ export function RegisterPage() {
       setError(result.error);
       return;
     }
-
     if (result.profileWarning) {
       setMessage(result.profileWarning);
     }
-
     if (result.needsEmailConfirmation) {
       setMessage(t.auth.registerConfirmation);
       return;
     }
-
     navigate("/dashboard", { replace: true });
   }
 
@@ -71,13 +65,11 @@ export function RegisterPage() {
     <div className="min-h-screen bg-ink text-white">
       <Navbar />
       <main>
-        <AuthCard
-          title={t.auth.registerTitle}
-          notice={t.auth.registerNotice}
-        >
+        <AuthCard title={t.auth.registerTitle}>
           <form className="grid gap-4" onSubmit={handleSubmit}>
             <AuthInput
               autoComplete="name"
+              disabled={isSubmitting}
               label={t.auth.name}
               name="name"
               onChange={setFullName}
@@ -86,6 +78,7 @@ export function RegisterPage() {
             />
             <AuthInput
               autoComplete="email"
+              disabled={isSubmitting}
               label={t.auth.email}
               name="email"
               onChange={setEmail}
@@ -95,6 +88,7 @@ export function RegisterPage() {
             />
             <AuthInput
               autoComplete="new-password"
+              disabled={isSubmitting}
               label={t.auth.password}
               name="password"
               onChange={setPassword}
@@ -104,6 +98,7 @@ export function RegisterPage() {
             />
             <AuthInput
               autoComplete="new-password"
+              disabled={isSubmitting}
               label={t.auth.confirmPassword}
               name="confirmPassword"
               onChange={setConfirmPassword}
@@ -112,25 +107,25 @@ export function RegisterPage() {
               value={confirmPassword}
             />
             {error ? (
-              <p className="rounded-2xl border border-white/10 bg-white/[0.035] p-3 text-sm text-white/72">
+              <p className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
                 {error}
               </p>
             ) : null}
             {message ? (
-              <p className="rounded-2xl border border-white/10 bg-white/[0.035] p-3 text-sm text-white/72">
+              <p className="rounded-2xl border border-primary/25 bg-primary/10 px-4 py-3 text-sm text-primary-200">
                 {message}
               </p>
             ) : null}
             <button
               type="submit"
               disabled={isSubmitting}
-              className="mt-2 h-12 rounded-full bg-white text-sm font-semibold text-black transition hover:-translate-y-0.5 hover:bg-white/90 disabled:cursor-not-allowed disabled:bg-white/24 disabled:text-white/42"
+              className="mt-2 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-primary text-sm font-semibold text-white transition hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-55"
             >
               {isSubmitting ? (
-                <span className="inline-flex items-center justify-center gap-2">
+                <>
                   <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
                   {t.auth.creatingAccount}
-                </span>
+                </>
               ) : (
                 t.auth.registerButton
               )}

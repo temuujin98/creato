@@ -2,15 +2,15 @@ import { ArrowLeft, Save, WandSparkles } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { AdminNotice } from "../../components/admin/AdminNotice";
-import { EdgeFunctionReadinessPanel } from "../../components/admin/product-editor/EdgeFunctionReadinessPanel";
-import { ModelRoutingPanel } from "../../components/admin/product-editor/ModelRoutingPanel";
-import { OptionMappingPanel } from "../../components/admin/product-editor/OptionMappingPanel";
-import { PromptVersionPanel } from "../../components/admin/product-editor/PromptVersionPanel";
-import { StatusBadge } from "../../components/admin/StatusBadge";
-import { categories } from "../../data/categories";
-import { products, type Product } from "../../data/products";
-import { useLanguage } from "../../hooks/useLanguage";
+import { AdminNotice } from "../../../components/admin/AdminNotice";
+import { StatusBadge } from "../../../components/admin/StatusBadge";
+import { EdgeFunctionReadinessPanel } from "../../../components/admin/product-editor/EdgeFunctionReadinessPanel";
+import { ModelRoutingPanel } from "../../../components/admin/product-editor/ModelRoutingPanel";
+import { OptionMappingPanel } from "../../../components/admin/product-editor/OptionMappingPanel";
+import { PromptVersionPanel } from "../../../components/admin/product-editor/PromptVersionPanel";
+import { categories } from "../../../data/categories";
+import { products, type Product } from "../../../data/products";
+import { useLanguage } from "../../../hooks/useLanguage";
 
 type ReadonlyFieldProps = {
   label: string;
@@ -65,7 +65,7 @@ const editorTabs = [
 
 type EditorTab = (typeof editorTabs)[number];
 
-export function AdminProductEditorPage() {
+export function AdminPresetEditorPage() {
   const { id } = useParams();
   const { language, t } = useLanguage();
   const [activeTab, setActiveTab] = useState<EditorTab>("basic");

@@ -1,9 +1,9 @@
-import { AdminNotice } from "../../components/admin/AdminNotice";
-import { AdminPageHeader } from "../../components/admin/AdminPageHeader";
-import { AdminTable } from "../../components/admin/AdminTable";
-import { StatusBadge } from "../../components/admin/StatusBadge";
-import { products } from "../../data/products";
-import { useLanguage } from "../../hooks/useLanguage";
+import { AdminNotice } from "../../../components/admin/AdminNotice";
+import { AdminPageHeader } from "../../../components/admin/AdminPageHeader";
+import { AdminTable } from "../../../components/admin/AdminTable";
+import { StatusBadge } from "../../../components/admin/StatusBadge";
+import { products } from "../../../data/products";
+import { useLanguage } from "../../../hooks/useLanguage";
 
 export function AdminGenerationsPage() {
   const { language, t } = useLanguage();

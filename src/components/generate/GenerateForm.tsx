@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AlertCircle, CheckCircle, Clock, LoaderCircle } from "lucide-react";
+import { Link } from "react-router-dom";
 import type { Product } from "../../data/products";
 import type { Language } from "../../i18n/translations";
 import {
@@ -22,23 +23,23 @@ import {
 } from "./UploadDropzone";
 
 type GenerateFormLabels = {
-  aiGenerationNextPhase: string;
+  buyCredits: string;
   edgeFunctionCallFailed: string;
   clickToUpload: string;
+  create: string;
   createFailed: string;
-  createGenerationRecord: string;
+  creating: string;
   credit: string;
+  creditRefundNotice: string;
   credits: string;
   dropzoneDescription: string;
   dropzoneTitle: string;
   failed: string;
   fileTooLarge: string;
   filesReady: string;
-  generationId: string;
   generationCompleted: string;
   generationFailed: string;
-  generationRecordCreated: string;
-  generationPending: string;
+  generationProgress: string;
   insufficientCredits: string;
   invalidFileType: string;
   loginRequired: string;
@@ -47,41 +48,31 @@ type GenerateFormLabels = {
   minimumImageRequirement: string;
   modelBackendMappingLater: string;
   modelOption: string;
-  noAiGenerationNotice: string;
-  noCreditDeductedNotice: string;
   optionsTitle: string;
   productDbIdMissing: string;
   readyToCreate: string;
-  recordCreatedAfterReserve: string;
   realAiDisabled: string;
   remove: string;
   refundAttempted: string;
   required: string;
   requiredImages: string;
   requiredOptionsMissing: string;
-  reserveAndCreate: string;
   reserveFailed: string;
-  reserveSuccess: string;
-  pollingStatus: string;
   providerRateLimit: string;
   providerFailureRefunded: string;
   processGenerationFailed: string;
-  processingGeneration: string;
   retryingStatus: string;
   safeErrorMessage: string;
   selected: string;
   selectModel: string;
   statusAddedToQueue: string;
-  statusAiBackendCalled: string;
-  statusAiBackendPending: string;
   statusCompleted: string;
+  statusCreditsRefunded: string;
   statusCreditReserved: string;
   statusFailed: string;
-  statusMovedToProcessing: string;
-  statusProcessingPlaceholder: string;
+  statusPresetInputsSaved: string;
+  statusProcessing: string;
   statusQueueFailed: string;
-  statusRecordCreated: string;
-  spendLaterNotice: string;
   signInToUpload: string;
   supportedFormats: string;
   textOnlyDescription: string;
@@ -412,6 +403,23 @@ export function GenerateForm({
     }
   }
 
+  const showLoginAction = !userId;
+  const showBuyCreditsAction =
+    Boolean(userId) &&
+    wallet !== null &&
+    !walletError &&
+    wallet.balance < selectedCreditCost;
+  const progressMessage = (() => {
+    if (createError) return createError;
+    if (timeline.completed) return labels.generationCompleted;
+    if (timeline.failed || timeline.queueFailed) return labels.generationFailed;
+    if (timeline.processing) return labels.statusProcessing;
+    if (timeline.queued) return labels.statusAddedToQueue;
+    if (timeline.recordCreated) return labels.statusPresetInputsSaved;
+    if (timeline.creditReserved) return labels.statusCreditReserved;
+    return readyReason;
+  })();
+
   return (
     <>
       <UploadDropzone
@@ -423,19 +431,19 @@ export function GenerateForm({
       />
 
       {needsMoreImages ? (
-        <p className="rounded-2xl border border-white/10 bg-white/[0.025] p-4 text-sm text-white/58">
+        <p className="rounded-2xl border border-white/10 bg-neutral-950 p-4 text-sm text-white/58">
           {labels.minimumImageRequirement}: {product.minImages}
         </p>
       ) : null}
 
       {failedCount > 0 && hasRequiredUploads ? (
-        <p className="rounded-2xl border border-white/10 bg-white/[0.025] p-4 text-sm text-white/46">
+        <p className="rounded-2xl border border-white/10 bg-neutral-950 p-4 text-sm text-white/46">
           {labels.uploadFailed}
         </p>
       ) : null}
 
       {product.modelOptions && product.modelOptions.length > 0 ? (
-        <section className="rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-6">
+        <section className="rounded-[1.75rem] border border-white/10 bg-neutral-950 p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-lg font-semibold text-white">
@@ -453,9 +461,9 @@ export function GenerateForm({
                   key={option.id}
                   type="button"
                   className={`rounded-2xl border p-4 text-left transition ${
-                    isSelected
-                      ? "border-white/60 bg-white/[0.09]"
-                      : "border-white/10 bg-black/30 hover:border-white/25 hover:bg-white/[0.05]"
+                      isSelected
+                        ? "border-primary bg-primary/10 ring-1 ring-primary/35"
+                        : "border-white/10 bg-black/30 hover:border-white/25 hover:bg-white/[0.05]"
                   }`}
                   onClick={() => onModelOptionChange?.(option.id)}
                 >
@@ -464,7 +472,7 @@ export function GenerateForm({
                       {option.name[language]}
                     </p>
                     {option.badge ? (
-                      <span className="rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-white/62">
+                        <span className="rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-primary-300">
                         {option.badge[language]}
                       </span>
                     ) : null}
@@ -487,7 +495,7 @@ export function GenerateForm({
       ) : null}
 
       {product.optionSchema && product.optionSchema.length > 0 ? (
-        <section className="rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-6">
+        <section className="rounded-[1.75rem] border border-white/10 bg-neutral-950 p-6">
           <p className="text-lg font-semibold text-white">{labels.optionsTitle}</p>
           <div className="mt-5 grid gap-4">
             {product.optionSchema.map((field) => (
@@ -506,71 +514,56 @@ export function GenerateForm({
         </section>
       ) : null}
 
-      <section className="rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-6">
+      <section className="rounded-[1.75rem] border border-white/10 bg-neutral-950 p-6">
         <p className="text-lg font-semibold text-white">
-          {labels.createGenerationRecord}
+          {labels.generationProgress}
         </p>
-        <p className="mt-3 text-sm leading-6 text-white/52">{readyReason}</p>
-        <div className="mt-4 grid gap-2 text-sm text-white/42">
-          <p>{labels.noAiGenerationNotice}</p>
-          <p>{labels.noCreditDeductedNotice}</p>
-          <p>{labels.spendLaterNotice}</p>
-        </div>
+        <p className="mt-3 text-sm leading-6 text-white/58">{progressMessage}</p>
+
+        {showLoginAction ? (
+          <Link
+            to="/login"
+            className="mt-5 inline-flex w-full items-center justify-center rounded-full border border-white/10 px-5 py-3 text-sm font-semibold text-white transition hover:border-primary/45 hover:bg-primary/10"
+          >
+            {labels.loginRequired}
+          </Link>
+        ) : null}
+
+        {showBuyCreditsAction ? (
+          <Link
+            to="/pricing"
+            className="mt-5 inline-flex w-full items-center justify-center rounded-full border border-primary/40 bg-primary/10 px-5 py-3 text-sm font-semibold text-primary-200 transition hover:bg-primary/15"
+          >
+            {labels.buyCredits}
+          </Link>
+        ) : null}
+
         <button
           type="button"
           disabled={!canCreate}
-          className="mt-5 inline-flex w-full items-center justify-center rounded-full bg-white px-5 py-3 text-sm font-semibold text-black transition hover:-translate-y-0.5 hover:bg-white/90 disabled:cursor-not-allowed disabled:bg-white/18 disabled:text-white/42"
+          className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-primary-700 disabled:cursor-not-allowed disabled:bg-white/12 disabled:text-white/38"
           onClick={handleCreateGeneration}
         >
-          {isCreating ? labels.processingGeneration : labels.reserveAndCreate}
+          {isCreating ? (
+            <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
+          ) : null}
+          {isCreating ? labels.creating : labels.create}
         </button>
 
-        {createdGenerationId ? (
-          <div className="mt-5 rounded-2xl border border-white/10 bg-black/30 p-4">
-            <p className="font-semibold text-white">
-              {labels.recordCreatedAfterReserve}
-            </p>
-            <p className="mt-2 font-mono text-xs text-white/54">
-              {labels.generationId}: {createdGenerationId}
-            </p>
-            <p className="mt-3 text-sm leading-6 text-white/48">
-              {labels.aiGenerationNextPhase}
-            </p>
-            <p className="mt-2 text-sm leading-6 text-white/48">
-              {labels.reserveSuccess}
-            </p>
-            <p className="mt-2 text-sm leading-6 text-white/48">
-              {timeline.completed
-                ? labels.generationCompleted
-                : timeline.failed
-                  ? labels.generationFailed
-                  : labels.pollingStatus}
-            </p>
-          </div>
-        ) : null}
-
         {createError ? (
-          <p className="mt-5 rounded-2xl border border-white/10 bg-black/30 p-4 text-sm text-white/68">
+          <p className="mt-5 rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm leading-6 text-red-100">
             {createError}
           </p>
         ) : null}
-      </section>
 
-      <section className="rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-6">
-        <p className="text-lg font-semibold text-white">{labels.generationPending}</p>
         <div className="mt-5 grid gap-3">
           <TimelineItem complete={timeline.creditReserved} label={labels.statusCreditReserved} />
-          <TimelineItem complete={timeline.recordCreated} label={labels.statusRecordCreated} />
+          <TimelineItem complete={timeline.recordCreated} label={labels.statusPresetInputsSaved} />
           <TimelineItem complete={timeline.queued} label={labels.statusAddedToQueue} />
           <TimelineItem
             complete={timeline.processing}
             icon="loader"
-            label={labels.statusMovedToProcessing}
-          />
-          <TimelineItem
-            complete={timeline.aiBackendCalled}
-            icon={timeline.aiBackendCalled && !timeline.completed ? "loader" : "clock"}
-            label={labels.statusAiBackendCalled}
+            label={labels.statusProcessing}
           />
           <TimelineItem
             complete={timeline.completed}
@@ -585,15 +578,15 @@ export function GenerateForm({
               timeline.queueFailed
                 ? labels.statusQueueFailed
                 : timeline.failed
-                  ? labels.statusFailed
+                  ? labels.statusCreditsRefunded
                   : timeline.completed
                     ? labels.statusCompleted
-                    : labels.statusAiBackendPending
+                    : labels.statusFailed
             }
           />
         </div>
         <p className="mt-4 text-sm leading-6 text-white/42">
-          {labels.statusProcessingPlaceholder}
+          {labels.creditRefundNotice}
         </p>
       </section>
     </>
@@ -617,10 +610,10 @@ function TimelineItem({
   })();
 
   return (
-    <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm">
+    <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-black/35 px-4 py-3 text-sm">
       <Icon
         className={`h-4 w-4 ${
-          complete ? "text-white" : "text-white/42"
+          complete ? "text-primary-300" : "text-white/42"
         } ${icon === "loader" && !complete ? "animate-spin" : ""}`}
         aria-hidden="true"
       />

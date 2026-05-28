@@ -85,7 +85,7 @@ export function GeneratePage() {
       <div className="min-h-screen bg-ink text-white">
         <Navbar />
         <main className="px-4 pb-24 pt-32 sm:px-6 lg:px-8">
-          <section className="mx-auto max-w-3xl rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-8 text-center">
+          <section className="mx-auto max-w-3xl rounded-[1.75rem] border border-white/10 bg-neutral-950 p-8 text-center">
             <p className="text-3xl font-semibold">{t.generate.notFoundTitle}</p>
             <p className="mt-4 text-white/58">{t.generate.notFoundDescription}</p>
             <Link
@@ -142,23 +142,23 @@ export function GeneratePage() {
                   selectedModelOptionId={selectedModelOption?.id ?? null}
                   userId={user?.id}
                   labels={{
-                    aiGenerationNextPhase: t.generate.aiGenerationNextPhase,
+                    buyCredits: t.nav.buyCredits,
                     edgeFunctionCallFailed: t.generate.edgeFunctionCallFailed,
                     clickToUpload: t.generate.clickToUpload,
+                    create: t.generate.create,
                     createFailed: t.generate.createFailed,
-                    createGenerationRecord: t.generate.createGenerationRecord,
+                    creating: t.generate.creating,
                     credit: t.productsPage.credit,
+                    creditRefundNotice: t.generate.creditRefundNotice,
                     credits: t.productsPage.credits,
                     dropzoneDescription: t.generate.dropzoneDescription,
                     dropzoneTitle: t.generate.dropzoneTitle,
                     failed: t.generate.failed,
                     fileTooLarge: t.generate.fileTooLarge,
                     filesReady: t.generate.filesReady,
-                    generationId: t.generate.generationId,
                     generationCompleted: t.generate.generationCompleted,
                     generationFailed: t.generate.generationFailed,
-                    generationRecordCreated: t.generate.generationRecordCreated,
-                    generationPending: t.generate.generationPending,
+                    generationProgress: t.generate.generationProgress,
                     insufficientCredits: t.generate.insufficientCredits,
                     invalidFileType: t.generate.invalidFileType,
                     loginRequired: t.generate.loginRequired,
@@ -167,41 +167,31 @@ export function GeneratePage() {
                     minimumImageRequirement: t.generate.minimumImageRequirement,
                     modelBackendMappingLater: t.generate.modelBackendMappingLater,
                     modelOption: t.generate.modelOption,
-                    noAiGenerationNotice: t.generate.noAiGenerationNotice,
-                    noCreditDeductedNotice: t.generate.noCreditDeductedNotice,
                     optionsTitle: t.generate.optionsTitle,
                     productDbIdMissing: t.generate.productDbIdMissing,
                     readyToCreate: t.generate.readyToCreate,
-                    recordCreatedAfterReserve: t.generate.recordCreatedAfterReserve,
                     realAiDisabled: t.generate.realAiDisabled,
                     remove: t.generate.remove,
                     refundAttempted: t.generate.refundAttempted,
                     required: t.generate.required,
                     requiredOptionsMissing: t.generate.requiredOptionsMissing,
                     requiredImages: t.generate.requiredImages,
-                    reserveAndCreate: t.generate.reserveAndCreate,
                     reserveFailed: t.generate.reserveFailed,
-                    reserveSuccess: t.generate.reserveSuccess,
-                    pollingStatus: t.generate.pollingStatus,
                     providerRateLimit: t.generate.providerRateLimit,
                     providerFailureRefunded: t.generate.providerFailureRefunded,
                     processGenerationFailed: t.generate.processGenerationFailed,
-                    processingGeneration: t.generate.processingGeneration,
                     retryingStatus: t.generate.retryingStatus,
                     safeErrorMessage: t.generate.safeErrorMessage,
                     selected: t.generate.selected,
                     selectModel: t.generate.selectModel,
                     statusAddedToQueue: t.generate.statusAddedToQueue,
-                    statusAiBackendCalled: t.generate.statusAiBackendCalled,
-                    statusAiBackendPending: t.generate.statusAiBackendPending,
                     statusCompleted: t.generate.statusCompleted,
+                    statusCreditsRefunded: t.generate.statusCreditsRefunded,
                     statusCreditReserved: t.generate.statusCreditReserved,
                     statusFailed: t.generate.statusFailed,
-                    statusMovedToProcessing: t.generate.statusMovedToProcessing,
-                    statusProcessingPlaceholder: t.generate.statusProcessingPlaceholder,
+                    statusPresetInputsSaved: t.generate.statusPresetInputsSaved,
+                    statusProcessing: t.generate.statusProcessing,
                     statusQueueFailed: t.generate.statusQueueFailed,
-                    statusRecordCreated: t.generate.statusRecordCreated,
-                    spendLaterNotice: t.generate.spendLaterNotice,
                     signInToUpload: t.generate.signInToUpload,
                     supportedFormats: t.generate.supportedFormats,
                     textOnlyDescription: t.generate.textOnlyDescription,
@@ -228,7 +218,7 @@ export function GeneratePage() {
             </div>
 
             <aside className="grid gap-5 lg:sticky lg:top-28">
-              <section className="rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-6">
+              <section className="rounded-[1.75rem] border border-white/10 bg-neutral-950 p-6">
                 <p className="text-lg font-semibold text-white">{t.generate.summary}</p>
                 <div className="mt-5 overflow-hidden rounded-[1.25rem] border border-white/10 bg-black/34">
                   <img
@@ -281,9 +271,6 @@ export function GeneratePage() {
                 signedUrlFailedLabel={t.generate.signedUrlFailed}
               />
 
-              <p className="text-center text-sm leading-6 text-white/42">
-                {t.generate.backendNotice}
-              </p>
             </aside>
           </div>
         </section>

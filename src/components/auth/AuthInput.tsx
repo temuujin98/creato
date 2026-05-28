@@ -1,5 +1,6 @@
 type AuthInputProps = {
   autoComplete?: string;
+  disabled?: boolean;
   label: string;
   name?: string;
   onChange?: (value: string) => void;
@@ -10,6 +11,7 @@ type AuthInputProps = {
 
 export function AuthInput({
   autoComplete,
+  disabled,
   label,
   name,
   onChange,
@@ -18,16 +20,17 @@ export function AuthInput({
   value,
 }: AuthInputProps) {
   return (
-    <label className="block">
-      <span className="text-sm font-medium text-white/62">{label}</span>
+    <label className="grid gap-2">
+      <span className="text-sm font-medium text-white/70">{label}</span>
       <input
         autoComplete={autoComplete}
+        disabled={disabled}
         name={name}
         onChange={(event) => onChange?.(event.target.value)}
         required={required}
         type={type}
         value={value}
-        className="mt-2 h-12 w-full rounded-2xl border border-white/10 bg-black/42 px-4 text-sm text-white outline-none transition placeholder:text-white/30 focus:border-white/34"
+        className="h-12 w-full rounded-2xl border border-white/10 bg-black px-4 text-sm text-white outline-none transition placeholder:text-white/35 focus:border-primary focus:ring-4 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
         placeholder={label}
       />
     </label>

@@ -109,7 +109,7 @@ export function UploadDropzone({
 
   if (!product.requiresImage) {
     return (
-      <section className="rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-6">
+      <section className="rounded-[1.75rem] border border-white/10 bg-neutral-950 p-6">
         <p className="text-lg font-semibold text-white">{labels.textOnlyTitle}</p>
         <p className="mt-3 leading-7 text-white/58">{labels.textOnlyDescription}</p>
       </section>
@@ -209,7 +209,7 @@ export function UploadDropzone({
   const readyCount = files.filter((item) => item.status === "uploaded").length;
 
   return (
-    <section className="rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-6">
+    <section className="rounded-[1.75rem] border border-white/10 bg-neutral-950 p-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-lg font-semibold text-white">{labels.uploadTitle}</p>

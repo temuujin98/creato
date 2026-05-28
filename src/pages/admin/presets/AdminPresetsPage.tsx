@@ -1,12 +1,12 @@
 import { Link } from "react-router-dom";
-import { categories } from "../../data/categories";
-import { products } from "../../data/products";
-import { AdminPageHeader } from "../../components/admin/AdminPageHeader";
-import { AdminTable } from "../../components/admin/AdminTable";
-import { StatusBadge } from "../../components/admin/StatusBadge";
-import { useLanguage } from "../../hooks/useLanguage";
+import { AdminPageHeader } from "../../../components/admin/AdminPageHeader";
+import { AdminTable } from "../../../components/admin/AdminTable";
+import { StatusBadge } from "../../../components/admin/StatusBadge";
+import { categories } from "../../../data/categories";
+import { products } from "../../../data/products";
+import { useLanguage } from "../../../hooks/useLanguage";
 
-export function AdminProductsPage() {
+export function AdminPresetsPage() {
   const { language, t } = useLanguage();
   const rows = products.map((product) => {
     const category = categories.find((item) => item.slug === product.categorySlug);
