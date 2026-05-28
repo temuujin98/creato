@@ -2,7 +2,7 @@
 
 ## creato
 
-The visible brand name for the product.
+The visible brand name for the service.
 
 ## creato.mn
 
@@ -12,9 +12,17 @@ The domain context. It should not replace `creato` as the visible brand name.
 
 A top-level grouping for creative workflows, such as e-commerce, restaurant, fashion, or beauty.
 
-## Product
+## Preset
 
-A specific creative workflow inside a category. Future products may require images, options, and credits.
+A specific creative workflow inside a category. Future presets may require images, options, model choices, and credits.
+
+## Legacy product tables
+
+The physical Supabase tables currently remain `products`, `product_translations`, `product_options`, and `product_option_choices` for MVP compatibility. Public and admin UI terminology is Preset. Migration `0009_preset_naming_aliases.sql` adds non-destructive preset-named views as aliases.
+
+## Public model option
+
+A user-facing tier inside a preset, such as Fast or Premium. Public model options do not expose provider names, model IDs, API keys, or internal routing. The backend maps `model_option` input values to `model_configs.public_option_id` and validates trusted credit cost server-side.
 
 ## Credit
 

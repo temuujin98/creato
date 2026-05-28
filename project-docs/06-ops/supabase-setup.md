@@ -266,6 +266,7 @@ SUPABASE_URL=
 SUPABASE_SERVICE_ROLE_KEY=
 GEMINI_API_KEY=
 OPENAI_API_KEY=
+ENABLE_REAL_AI_GENERATION=
 ```
 
 Do not create `VITE_GEMINI_API_KEY`, `VITE_OPENAI_API_KEY`, or any browser-exposed AI secret. `VITE_` variables are included in the browser bundle.
@@ -274,12 +275,35 @@ Supabase Edge Function secrets can be configured with:
 
 ```bash
 supabase secrets set GEMINI_API_KEY=...
+supabase secrets set ENABLE_REAL_AI_GENERATION=false
 supabase secrets set OPENAI_API_KEY=...
 supabase secrets set SUPABASE_SERVICE_ROLE_KEY=...
 supabase secrets set SUPABASE_URL=...
 ```
 
 Do not commit real keys. Use separate local, staging, and production secrets.
+
+Real provider execution is cost-gated. `process-generation` treats real AI generation as disabled unless:
+
+```text
+ENABLE_REAL_AI_GENERATION=true
+```
+
+When the value is missing or anything other than `true`, the Edge Function must not call Gemini. If a generation was already reserved by the frontend, the function marks the generation failed with `real_ai_disabled`, calls `refund_reserved_credits`, and returns a safe `real_ai_disabled` response.
+
+To enable one controlled production test:
+
+```bash
+supabase secrets set ENABLE_REAL_AI_GENERATION=true
+supabase functions deploy process-generation
+```
+
+To disable real provider calls again:
+
+```bash
+supabase secrets set ENABLE_REAL_AI_GENERATION=false
+supabase functions deploy process-generation
+```
 
 Phase 14A planning docs:
 
@@ -292,6 +316,7 @@ Phase 14A planning docs:
 Phase 14C-B implements the Gemini adapter in the Edge Function. Required setup before testing real generation:
 
 - `GEMINI_API_KEY` set as a Supabase Edge Function secret.
+- `ENABLE_REAL_AI_GENERATION=true` set as a Supabase Edge Function secret only for controlled real-provider tests.
 - `SUPABASE_URL` set as an Edge Function secret.
 - `SUPABASE_SERVICE_ROLE_KEY` set as an Edge Function secret.
 - `generation-outputs` bucket exists and remains private.
@@ -313,6 +338,7 @@ Current production-like readiness can be verified before a Gemini key exists:
 - `process-generation` is deployed with JWT verification enabled.
 - `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are configured as Edge Function secrets.
 - `GEMINI_API_KEY` remains pending and must be added only as an Edge Function secret.
+- `ENABLE_REAL_AI_GENERATION` should remain unset or `false` until a deliberate real-provider test.
 - `clean-studio-product-shot` has an active prompt version and active model config.
 - `user-uploads` and `generation-outputs` buckets exist and remain private.
 - Wallet reserve/refund smoke tests pass and leave the wallet balance unchanged.
@@ -321,6 +347,7 @@ When the Gemini key is available:
 
 ```bash
 supabase secrets set GEMINI_API_KEY=...
+supabase secrets set ENABLE_REAL_AI_GENERATION=true
 supabase functions deploy process-generation
 ```
 

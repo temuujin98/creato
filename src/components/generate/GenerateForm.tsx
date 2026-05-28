@@ -27,6 +27,8 @@ type GenerateFormLabels = {
   clickToUpload: string;
   createFailed: string;
   createGenerationRecord: string;
+  credit: string;
+  credits: string;
   dropzoneDescription: string;
   dropzoneTitle: string;
   failed: string;
@@ -43,12 +45,15 @@ type GenerateFormLabels = {
   maxFileSize: string;
   maximumImageRequirement: string;
   minimumImageRequirement: string;
+  modelBackendMappingLater: string;
+  modelOption: string;
   noAiGenerationNotice: string;
   noCreditDeductedNotice: string;
   optionsTitle: string;
   productDbIdMissing: string;
   readyToCreate: string;
   recordCreatedAfterReserve: string;
+  realAiDisabled: string;
   remove: string;
   refundAttempted: string;
   required: string;
@@ -58,11 +63,14 @@ type GenerateFormLabels = {
   reserveFailed: string;
   reserveSuccess: string;
   pollingStatus: string;
+  providerRateLimit: string;
+  providerFailureRefunded: string;
   processGenerationFailed: string;
   processingGeneration: string;
   retryingStatus: string;
   safeErrorMessage: string;
   selected: string;
+  selectModel: string;
   statusAddedToQueue: string;
   statusAiBackendCalled: string;
   statusAiBackendPending: string;
@@ -93,6 +101,9 @@ type GenerateFormProps = {
   labels: GenerateFormLabels;
   language: Language;
   product: Product;
+  selectedCreditCost: number;
+  selectedModelOptionId: string | null;
+  onModelOptionChange?: (modelOptionId: string) => void;
   onGenerationIdChange?: (generationId: string | null) => void;
   onWalletChange?: (wallet: Wallet) => void;
   onStatusChange?: (
@@ -111,6 +122,9 @@ export function GenerateForm({
   onGenerationIdChange,
   onStatusChange,
   product,
+  selectedCreditCost,
+  selectedModelOptionId,
+  onModelOptionChange,
   userId,
   wallet,
   walletError,
@@ -146,6 +160,22 @@ export function GenerateForm({
   });
   const mountedRef = useRef(true);
 
+  function getSafeGenerationError(errorCode?: string | null, errorMessage?: string | null) {
+    if (errorCode === "provider_rate_limit") {
+      return `${labels.providerRateLimit} ${labels.providerFailureRefunded}`;
+    }
+
+    if (errorCode === "real_ai_disabled") {
+      return labels.realAiDisabled;
+    }
+
+    if (errorMessage) {
+      return `${errorMessage} ${labels.providerFailureRefunded}`;
+    }
+
+    return labels.processGenerationFailed;
+  }
+
   useEffect(() => {
     return () => {
       mountedRef.current = false;
@@ -180,7 +210,7 @@ export function GenerateForm({
     if (!product.dbProductId) return labels.productDbIdMissing;
     if (walletLoading) return labels.uploading;
     if (walletError || !wallet) return labels.reserveFailed;
-    if (wallet.balance < product.creditCost) return labels.insufficientCredits;
+    if (wallet.balance < selectedCreditCost) return labels.insufficientCredits;
     if (uploadingCount > 0) return labels.uploadInProgress;
     if (!hasRequiredUploads) return labels.uploadRequired;
     if (missingRequiredOptions.length > 0) return labels.requiredOptionsMissing;
@@ -192,7 +222,7 @@ export function GenerateForm({
     Boolean(wallet) &&
     !walletError &&
     !walletLoading &&
-    (wallet?.balance ?? 0) >= product.creditCost &&
+    (wallet?.balance ?? 0) >= selectedCreditCost &&
     uploadingCount === 0 &&
     hasRequiredUploads &&
     missingRequiredOptions.length === 0 &&
@@ -269,7 +299,7 @@ export function GenerateForm({
 
     try {
       const reservedWallet = await reserveCredits({
-        amount: product.creditCost,
+        amount: selectedCreditCost,
         idempotencyKey: reserveKey,
         reason: `Reserve for ${product.slug}`,
         userId,
@@ -280,8 +310,11 @@ export function GenerateForm({
       setTimeline((current) => ({ ...current, creditReserved: true }));
 
       const result = await createGenerationRecord({
-        creditCost: product.creditCost,
-        optionValues: values,
+        // TODO: Backend validates model_option against model_configs.public_option_id and trusted credit cost.
+        creditCost: selectedCreditCost,
+        optionValues: selectedModelOptionId
+          ? { ...values, model_option: selectedModelOptionId }
+          : values,
         productId: product.dbProductId,
         uploadedFiles: uploadedReadyFiles.map((item) => ({
           fileName: item.file.name,
@@ -328,10 +361,20 @@ export function GenerateForm({
           setTimeline((current) => ({ ...current, failed: true }));
           onStatusChange?.("failed");
           setCreateError(
-            terminalStatus.error_message || labels.processGenerationFailed,
+            getSafeGenerationError(
+              terminalStatus.error_code,
+              terminalStatus.error_message,
+            ),
           );
         } else if (!processResponse.ok) {
-          setCreateError(processResponse.message || labels.processGenerationFailed);
+          setCreateError(
+            processResponse.status === "real_ai_disabled" ||
+              processResponse.error === "real_ai_disabled"
+              ? labels.realAiDisabled
+              : processResponse.error === "provider_rate_limit"
+                ? `${labels.providerRateLimit} ${labels.providerFailureRefunded}`
+                : processResponse.message || labels.processGenerationFailed,
+          );
         }
       } catch {
         setTimeline((current) => ({
@@ -350,7 +393,7 @@ export function GenerateForm({
       if (didReserve) {
         try {
           const refundedWallet = await refundReservedCredits({
-            amount: product.creditCost,
+            amount: selectedCreditCost,
             idempotencyKey: `refund:${userId}:${product.dbProductId}:${crypto.randomUUID()}`,
             reason: `Refund reserve for failed record creation: ${product.slug}`,
             userId,
@@ -389,6 +432,58 @@ export function GenerateForm({
         <p className="rounded-2xl border border-white/10 bg-white/[0.025] p-4 text-sm text-white/46">
           {labels.uploadFailed}
         </p>
+      ) : null}
+
+      {product.modelOptions && product.modelOptions.length > 0 ? (
+        <section className="rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-lg font-semibold text-white">
+                {labels.modelOption}
+              </p>
+              <p className="mt-2 text-sm text-white/48">{labels.selectModel}</p>
+            </div>
+          </div>
+          <div className="mt-5 grid gap-3 md:grid-cols-2">
+            {product.modelOptions.map((option) => {
+              const isSelected = option.id === selectedModelOptionId;
+
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  className={`rounded-2xl border p-4 text-left transition ${
+                    isSelected
+                      ? "border-white/60 bg-white/[0.09]"
+                      : "border-white/10 bg-black/30 hover:border-white/25 hover:bg-white/[0.05]"
+                  }`}
+                  onClick={() => onModelOptionChange?.(option.id)}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="font-semibold text-white">
+                      {option.name[language]}
+                    </p>
+                    {option.badge ? (
+                      <span className="rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-white/62">
+                        {option.badge[language]}
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="mt-3 text-sm leading-6 text-white/54">
+                    {option.description[language]}
+                  </p>
+                  <p className="mt-4 text-sm font-semibold text-white/80">
+                    {option.creditCost}{" "}
+                    {option.creditCost === 1 ? labels.credit : labels.credits}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+          <p className="mt-4 text-xs leading-5 text-white/34">
+            {labels.modelBackendMappingLater}
+          </p>
+        </section>
       ) : null}
 
       {product.optionSchema && product.optionSchema.length > 0 ? (

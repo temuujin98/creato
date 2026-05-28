@@ -28,6 +28,8 @@ export type CreatePromptVersionInput = {
 export type ModelConfig = {
   id: string;
   product_id: string;
+  public_option_id: string | null;
+  display_name: string | null;
   primary_provider: "gemini" | "openai";
   primary_model: string;
   fallback_provider: "gemini" | "openai" | null;
@@ -37,7 +39,9 @@ export type ModelConfig = {
   retry_limit: number;
   cleanup_enabled: boolean;
   estimated_cost_mnt: number | null;
+  credit_cost_override: number | null;
   is_active: boolean;
+  is_default: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -45,6 +49,8 @@ export type ModelConfig = {
 export type UpsertModelConfigInput = {
   id?: string;
   productId: string;
+  publicOptionId?: string;
+  displayName?: string;
   primaryProvider: "gemini" | "openai";
   primaryModel: string;
   fallbackProvider?: "gemini" | "openai" | null;
@@ -54,6 +60,9 @@ export type UpsertModelConfigInput = {
   retryLimit: number;
   cleanupEnabled: boolean;
   estimatedCostMnt?: number | null;
+  creditCostOverride?: number | null;
+  isActive: boolean;
+  isDefault: boolean;
 };
 
 export type ProductConfigReadiness = {
@@ -146,7 +155,7 @@ export async function listModelConfigs(productId: string) {
   const { data, error } = await client
     .from("model_configs")
     .select(
-      "id,product_id,primary_provider,primary_model,fallback_provider,fallback_model,output_size,output_count,retry_limit,cleanup_enabled,estimated_cost_mnt,is_active,created_at,updated_at",
+      "id,product_id,public_option_id,display_name,primary_provider,primary_model,fallback_provider,fallback_model,output_size,output_count,retry_limit,cleanup_enabled,estimated_cost_mnt,credit_cost_override,is_active,is_default,created_at,updated_at",
     )
     .eq("product_id", productId)
     .order("created_at", { ascending: false });
@@ -160,13 +169,34 @@ export async function listModelConfigs(productId: string) {
 
 export async function getActiveModelConfig(productId: string) {
   const client = requireSupabase();
-  const { data, error } = await client
+  const selectColumns =
+    "id,product_id,public_option_id,display_name,primary_provider,primary_model,fallback_provider,fallback_model,output_size,output_count,retry_limit,cleanup_enabled,estimated_cost_mnt,credit_cost_override,is_active,is_default,created_at,updated_at";
+
+  const { data: defaultConfig, error: defaultError } = await client
     .from("model_configs")
-    .select(
-      "id,product_id,primary_provider,primary_model,fallback_provider,fallback_model,output_size,output_count,retry_limit,cleanup_enabled,estimated_cost_mnt,is_active,created_at,updated_at",
-    )
+    .select(selectColumns)
     .eq("product_id", productId)
     .eq("is_active", true)
+    .eq("is_default", true)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (defaultError) {
+    throw new Error(defaultError.message);
+  }
+
+  if (defaultConfig) {
+    return defaultConfig as ModelConfig;
+  }
+
+  const { data, error } = await client
+    .from("model_configs")
+    .select(selectColumns)
+    .eq("product_id", productId)
+    .eq("is_active", true)
+    .order("created_at", { ascending: false })
+    .limit(1)
     .maybeSingle();
 
   if (error) {
@@ -178,25 +208,42 @@ export async function getActiveModelConfig(productId: string) {
 
 export async function upsertModelConfig(input: UpsertModelConfigInput) {
   const client = requireSupabase();
+
+  if (input.isDefault) {
+    const { error } = await client
+      .from("model_configs")
+      .update({ is_default: false })
+      .eq("product_id", input.productId);
+
+    if (error) {
+      throw new Error(error.message);
+    }
+  }
+
   const payload = {
     cleanup_enabled: input.cleanupEnabled,
+    credit_cost_override: input.creditCostOverride ?? null,
+    display_name: normalizeOptionalText(input.displayName),
     estimated_cost_mnt: input.estimatedCostMnt ?? null,
     fallback_model: normalizeOptionalText(input.fallbackModel),
     fallback_provider: input.fallbackProvider ?? null,
+    is_active: input.isActive,
+    is_default: input.isDefault,
     output_count: input.outputCount,
     output_size: normalizeOptionalText(input.outputSize),
     primary_model: input.primaryModel.trim(),
     primary_provider: input.primaryProvider,
     product_id: input.productId,
+    public_option_id: normalizeOptionalText(input.publicOptionId),
     retry_limit: input.retryLimit,
   };
 
   const query = input.id
     ? client.from("model_configs").update(payload).eq("id", input.id).select(
-        "id,product_id,primary_provider,primary_model,fallback_provider,fallback_model,output_size,output_count,retry_limit,cleanup_enabled,estimated_cost_mnt,is_active,created_at,updated_at",
+        "id,product_id,public_option_id,display_name,primary_provider,primary_model,fallback_provider,fallback_model,output_size,output_count,retry_limit,cleanup_enabled,estimated_cost_mnt,credit_cost_override,is_active,is_default,created_at,updated_at",
       )
     : client.from("model_configs").insert(payload).select(
-        "id,product_id,primary_provider,primary_model,fallback_provider,fallback_model,output_size,output_count,retry_limit,cleanup_enabled,estimated_cost_mnt,is_active,created_at,updated_at",
+        "id,product_id,public_option_id,display_name,primary_provider,primary_model,fallback_provider,fallback_model,output_size,output_count,retry_limit,cleanup_enabled,estimated_cost_mnt,credit_cost_override,is_active,is_default,created_at,updated_at",
       );
 
   const { data, error } = await query.single();
@@ -213,7 +260,7 @@ export async function setActiveModelConfig(productId: string, modelConfigId: str
 
   const { error: resetError } = await client
     .from("model_configs")
-    .update({ is_active: false })
+    .update({ is_default: false })
     .eq("product_id", productId);
 
   if (resetError) {
@@ -222,7 +269,7 @@ export async function setActiveModelConfig(productId: string, modelConfigId: str
 
   const { error: activateError } = await client
     .from("model_configs")
-    .update({ is_active: true })
+    .update({ is_active: true, is_default: true })
     .eq("product_id", productId)
     .eq("id", modelConfigId);
 

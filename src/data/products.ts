@@ -31,6 +31,15 @@ export type ProductOptionSchema = {
   choices?: ProductOptionChoice[];
 };
 
+export type ProductModelOption = {
+  id: string;
+  name: Record<Language, string>;
+  description: Record<Language, string>;
+  badge?: Record<Language, string>;
+  creditCost: number;
+  isDefault?: boolean;
+};
+
 export type Product = {
   id: string;
   dbProductId?: string;
@@ -52,6 +61,7 @@ export type Product = {
   outputExamples: string[];
   inputMode: "image" | "multi-image" | "text-only";
   aspectRatios?: string[];
+  modelOptions?: ProductModelOption[];
   optionPreview?: ProductOptionPreview[];
   optionSchema?: ProductOptionSchema[];
 };
@@ -126,7 +136,7 @@ const backgroundStyleOption: ProductOptionSchema = {
 
 const productMoodOption: ProductOptionSchema = {
   key: "productMood",
-  label: { mn: "Product mood", en: "Product mood" },
+  label: { mn: "Preset mood", en: "Preset mood" },
   type: "radio",
   required: true,
   defaultValue: "premium",
@@ -198,24 +208,48 @@ const notesOption: ProductOptionSchema = {
   },
 };
 
+const defaultModelOptions: ProductModelOption[] = [
+  {
+    id: "fast",
+    name: { mn: "Fast", en: "Fast" },
+    description: {
+      mn: "Хурдан, энгийн зураг үүсгэхэд тохиромжтой.",
+      en: "Good for fast, simple image generation.",
+    },
+    badge: { mn: "Санал болгох", en: "Recommended" },
+    creditCost: 1,
+    isDefault: true,
+  },
+  {
+    id: "premium",
+    name: { mn: "Premium", en: "Premium" },
+    description: {
+      mn: "Илүү чанартай, detail сайтай output-д тохиромжтой.",
+      en: "Better for higher-quality, more detailed output.",
+    },
+    badge: { mn: "Илүү чанартай", en: "Higher quality" },
+    creditCost: 2,
+  },
+];
+
 export const products: Product[] = [
   {
     id: "clean-studio-product-shot",
     dbProductId: "22222222-2222-4222-8222-222222222201",
     slug: "clean-studio-product-shot",
     categorySlug: "product-photo",
-    name: { mn: "Clean Studio Product Shot", en: "Clean Studio Product Shot" },
+    name: { mn: "Clean Studio Image Preset", en: "Clean Studio Image Preset" },
     shortDescription: {
       mn: "Барааны зургийг цэвэр studio look-той болгоно.",
       en: "Turn product photos into clean studio-style visuals.",
     },
     description: {
-      mn: "E-commerce, catalog, marketplace-д ашиглахад тохиромжтой цэвэр background, premium lighting бүхий product visual үүсгэх product.",
-      en: "A product for creating clean-background, premium-lit visuals for e-commerce, catalogs, and marketplaces.",
+      mn: "E-commerce, catalog, marketplace-д ашиглахад тохиромжтой цэвэр background, premium lighting бүхий preset visual үүсгэнэ.",
+      en: "A preset for creating clean-background, premium-lit visuals for e-commerce, catalogs, and marketplaces.",
     },
     guide: {
       mn: "Нэг барааны тод, чанартай зураг сонгоно. Дараагийн phase-д background/style option сонгох UI нэмэгдэнэ.",
-      en: "Choose one clear product photo. A future phase will add background and style option UI.",
+      en: "Choose one clear input photo. A future phase will add background and style option UI.",
     },
     imageUrl: productImage("Studio", "#111111", "#5f6870"),
     creditCost: 1,
@@ -232,6 +266,7 @@ export const products: Product[] = [
     ],
     inputMode: "multi-image",
     aspectRatios: ["1:1", "4:5", "9:16"],
+    modelOptions: defaultModelOptions,
     optionPreview: [optionStyle, optionFormat],
     optionSchema: [backgroundStyleOption, aspectRatioOption],
   },
@@ -240,10 +275,10 @@ export const products: Product[] = [
     dbProductId: "22222222-2222-4222-8222-222222222202",
     slug: "luxury-product-ad",
     categorySlug: "product-photo",
-    name: { mn: "Luxury Product Ad", en: "Luxury Product Ad" },
+    name: { mn: "Luxury Image Ad", en: "Luxury Image Ad" },
     shortDescription: {
       mn: "Premium campaign mood бүхий барааны сурталчилгааны visual.",
-      en: "Premium campaign visuals for product advertising.",
+      en: "Premium campaign visuals for item advertising.",
     },
     description: {
       mn: "Skincare, perfume, accessories, fashion item зэрэг premium бараанд зориулсан cinematic ad visual direction.",
@@ -251,7 +286,7 @@ export const products: Product[] = [
     },
     guide: {
       mn: "Барааны 1-2 зураг бэлдэнэ. Ирээдүйд material, mood, background option нэмэгдэнэ.",
-      en: "Prepare 1-2 product images. Future options can include material, mood, and background controls.",
+      en: "Prepare 1-2 input images. Future options can include material, mood, and background controls.",
     },
     imageUrl: productImage("Luxury", "#0a0a0a", "#71636f"),
     creditCost: 2,
@@ -268,6 +303,7 @@ export const products: Product[] = [
     ],
     inputMode: "multi-image",
     aspectRatios: ["1:1", "4:5", "9:16", "16:9"],
+    modelOptions: defaultModelOptions,
     optionPreview: [optionStyle],
     optionSchema: [backgroundStyleOption, aspectRatioOption, productMoodOption],
   },
@@ -287,7 +323,7 @@ export const products: Product[] = [
     },
     guide: {
       mn: "Sale нэр, богино message, барааны зураг нэмэх flow дараагийн phase-д орно.",
-      en: "A future phase will add inputs for sale title, short message, and product images.",
+      en: "A future phase will add inputs for sale title, short message, and optional item images.",
     },
     imageUrl: productImage("Sale", "#080808", "#685f55"),
     creditCost: 1,
@@ -301,6 +337,7 @@ export const products: Product[] = [
     outputExamples: [productImage("Offer", "#111111", "#6a5f54")],
     inputMode: "text-only",
     aspectRatios: ["1:1", "4:5", "9:16"],
+    modelOptions: defaultModelOptions,
     optionPreview: [optionFormat],
     optionSchema: [saleTextOption, discountTextOption, aspectRatioOption],
   },
@@ -312,7 +349,7 @@ export const products: Product[] = [
     name: { mn: "New Arrival Post", en: "New Arrival Post" },
     shortDescription: {
       mn: "Шинэ collection, шинэ бараанд зориулсан social post.",
-      en: "Social post visuals for new collections and new products.",
+      en: "Social post visuals for new collections and new arrivals.",
     },
     description: {
       mn: "Instagram/Facebook feed-д тохирох minimal, premium new arrival visual template direction.",
@@ -320,7 +357,7 @@ export const products: Product[] = [
     },
     guide: {
       mn: "Барааны зураг болон богино headline option ирээдүйд нэмэгдэнэ.",
-      en: "Product image and short headline options will be added in a later phase.",
+      en: "Input image and short headline options will be added in a later phase.",
     },
     imageUrl: productImage("Arrival", "#101010", "#5d6874"),
     creditCost: 1,
@@ -334,6 +371,7 @@ export const products: Product[] = [
     outputExamples: [productImage("New", "#101010", "#536574")],
     inputMode: "multi-image",
     aspectRatios: ["1:1", "4:5", "9:16"],
+    modelOptions: defaultModelOptions,
     optionPreview: [optionFormat],
     optionSchema: [aspectRatioOption],
   },
@@ -367,6 +405,7 @@ export const products: Product[] = [
     outputExamples: [productImage("Menu", "#0b0b0b", "#526b5c")],
     inputMode: "multi-image",
     aspectRatios: ["1:1", "4:5", "9:16"],
+    modelOptions: defaultModelOptions,
     optionPreview: [optionStyle, optionFormat],
     optionSchema: [foodNameOption, moodSelectOption, aspectRatioOption],
   },
@@ -375,7 +414,7 @@ export const products: Product[] = [
     dbProductId: "22222222-2222-4222-8222-222222222206",
     slug: "cosmetic-product-visual",
     categorySlug: "beauty-fashion",
-    name: { mn: "Cosmetic Product Visual", en: "Cosmetic Product Visual" },
+    name: { mn: "Cosmetic Visual Preset", en: "Cosmetic Visual Preset" },
     shortDescription: {
       mn: "Skincare, makeup, beauty product-д зориулсан premium visual.",
       en: "Premium visuals for skincare, makeup, and beauty products.",
@@ -386,7 +425,7 @@ export const products: Product[] = [
     },
     guide: {
       mn: "Барааны зураг болон mood/style сонголт дараагийн UI phase-д нэмэгдэнэ.",
-      en: "Product image and mood/style choices will be added in the next UI phase.",
+      en: "Input image and mood/style choices will be added in the next UI phase.",
     },
     imageUrl: productImage("Beauty", "#090909", "#74626b"),
     creditCost: 2,
@@ -400,6 +439,7 @@ export const products: Product[] = [
     outputExamples: [productImage("Glow", "#080808", "#7a6571")],
     inputMode: "multi-image",
     aspectRatios: ["1:1", "4:5", "9:16"],
+    modelOptions: defaultModelOptions,
     optionPreview: [optionStyle],
     optionSchema: [backgroundStyleOption, productMoodOption, aspectRatioOption],
   },
@@ -433,6 +473,7 @@ export const products: Product[] = [
     outputExamples: [productImage("Promo", "#0c0c0c", "#60636d")],
     inputMode: "text-only",
     aspectRatios: ["1:1", "4:5", "9:16"],
+    modelOptions: defaultModelOptions,
     optionPreview: [optionFormat],
     optionSchema: [saleTextOption, aspectRatioOption],
   },
@@ -443,8 +484,8 @@ export const products: Product[] = [
     categorySlug: "trend-templates",
     name: { mn: "Viral AI Portrait Style", en: "Viral AI Portrait Style" },
     shortDescription: {
-      mn: "Trend portrait visual style турших product.",
-      en: "A product for exploring trend portrait visual styles.",
+      mn: "Trend portrait visual style турших preset.",
+      en: "A preset for exploring trend portrait visual styles.",
     },
     description: {
       mn: "Social trend, campaign avatar, profile visual зэрэг portrait-focused creative output-д зориулсан direction.",
@@ -466,6 +507,7 @@ export const products: Product[] = [
     outputExamples: [productImage("Viral", "#0a0a0a", "#626f7a")],
     inputMode: "image",
     aspectRatios: ["1:1", "4:5", "9:16"],
+    modelOptions: defaultModelOptions,
     optionPreview: [optionStyle],
     optionSchema: [portraitStyleOption, aspectRatioOption, notesOption],
   },

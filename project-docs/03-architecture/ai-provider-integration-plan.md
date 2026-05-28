@@ -23,6 +23,26 @@ The frontend must never call AI providers directly. All provider calls must happ
 - Retry limit
 - Cleanup behavior
 
+## Public Preset Model Options
+
+The frontend may show preset-level model options such as Fast or Premium. These are user-facing tiers, not provider configuration.
+
+Public model options may include:
+
+- Stable public id, such as `fast` or `premium`.
+- Translated name and description.
+- Translated badge.
+- Displayed credit cost.
+- Default selection flag.
+
+Public model options must never include provider names, provider model IDs, API keys, hidden routing config, or internal provider cost.
+
+The backend maps submitted `generation_inputs.option_key = model_option` values to `model_configs.public_option_id`. Provider/model names remain admin-only. `model_configs.credit_cost_override` is the trusted per-option credit cost when present; otherwise the backend falls back to the legacy internal `products.credit_cost` column.
+
+The public term is Preset. Legacy physical table names such as `products` remain internal for MVP compatibility and have preset-named alias views.
+
+Frontend credit display is UX only. `process-generation` must validate that `generations.credit_cost` matches the trusted expected cost before any provider execution path. If it does not match, the function marks the generation failed, refunds the reserved credits, and returns a safe `credit_cost_mismatch` response.
+
 ## Why Gemini-First
 
 Gemini is the preferred first provider for MVP validation because:
@@ -171,3 +191,35 @@ Phase 14C-B implements the Gemini path inside `process-generation`:
 - Failure paths mark failed and call `refund_reserved_credits`.
 
 OpenAI remains unimplemented. Frontend behavior is unchanged until a later trigger/polling phase.
+
+## Cost-Safe Provider Execution Guard
+
+Real provider execution is disabled by default to avoid accidental paid API calls during development and setup.
+
+`process-generation` must only call Gemini when both conditions are true:
+
+1. `ENABLE_REAL_AI_GENERATION=true` is set in Supabase Edge Function secrets.
+2. The request body does not set `dryRun: true`.
+
+If `ENABLE_REAL_AI_GENERATION` is missing or any value other than `true`, the function must:
+
+- Avoid Gemini/OpenAI calls.
+- Mark the generation failed with `error_code = real_ai_disabled`.
+- Refund reserved credits with `refund:{generationId}`.
+- Return a safe `real_ai_disabled` response.
+- Avoid creating `generation_outputs`.
+- Avoid spending credits.
+
+Manual controls:
+
+```bash
+supabase secrets set ENABLE_REAL_AI_GENERATION=true
+supabase functions deploy process-generation
+```
+
+Disable again:
+
+```bash
+supabase secrets set ENABLE_REAL_AI_GENERATION=false
+supabase functions deploy process-generation
+```

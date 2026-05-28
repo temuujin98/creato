@@ -29,6 +29,7 @@ Public client may receive:
 - Credit cost.
 - Upload requirements.
 - Visible options.
+- Public model option tiers such as Fast or Premium.
 
 Admin/backend only:
 
@@ -41,6 +42,8 @@ Admin/backend only:
 - Retry/fallback rules.
 - Internal provider cost.
 - Admin notes.
+
+Public model option tiers must remain safe display data. They can describe user-facing quality or speed choices and credit cost, but they must not contain Gemini/OpenAI model IDs, provider names, prompt fragments, API keys, or routing rules.
 
 ## Public Visible Option Schema
 
@@ -165,6 +168,17 @@ Model routing should be stored in `model_configs`:
 
 API keys must be environment variables or secret manager entries, not database fields.
 
+Public `modelOptionId` values map to `model_configs.public_option_id` only inside backend/admin code. The backend must validate that the selected model option belongs to the preset and must compute trusted credit cost server-side.
+
+`model_configs` now supports:
+
+- `public_option_id`: safe user-facing tier id such as `fast` or `premium`.
+- `display_name`: admin-facing label.
+- `is_default`: default active config when no model option is submitted.
+- `credit_cost_override`: trusted server-side credit cost for that option.
+
+Frontend credit display is never the source of truth.
+
 ## Security Rules
 
 - Do not store real production prompts in frontend mock data.
@@ -172,6 +186,8 @@ API keys must be environment variables or secret manager entries, not database f
 - Do not return model configs to public clients.
 - Do not compile prompts client-side.
 - Do not trust client-provided product credit cost.
+- Do not trust client-provided model option credit cost.
+- Do not expose provider/model IDs through public model options.
 - Do not trust client-provided option labels.
 - Validate all submitted values on the backend.
 - Log admin prompt changes in `admin_logs`.

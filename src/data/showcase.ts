@@ -37,8 +37,8 @@ function svgImage(title: string, from: string, to: string) {
 export const showcaseItems: ShowcaseItem[] = [
   {
     id: "product-campaign",
-    title: { mn: "Product campaign", en: "Product campaign" },
-    alt: { mn: "Барааны campaign visual", en: "Product campaign visual" },
+    title: { mn: "Campaign visual", en: "Campaign visual" },
+    alt: { mn: "Барааны campaign visual", en: "Campaign visual" },
     image: svgImage("Campaign", "#111111", "#5f6f76"),
     rotation: "-rotate-3",
   },

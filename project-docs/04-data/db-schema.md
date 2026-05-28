@@ -6,7 +6,7 @@ This document defines the planned Supabase/Postgres data model for `creato`. It 
 
 The future backend must support:
 
-- Category -> Product discovery.
+- Category -> Preset discovery.
 - User accounts and profiles.
 - Credit wallets with ledger-backed transactions.
 - Payments and credit packages.
@@ -62,6 +62,8 @@ create type model_config_status as enum ('draft', 'active', 'disabled');
 ```
 
 ## Table List
+
+Public and admin terminology is Preset. The MVP keeps legacy physical table names such as `products` for compatibility; migration `0009_preset_naming_aliases.sql` adds preset-named alias views.
 
 1. `profiles`
 2. `wallets`
@@ -273,7 +275,7 @@ RLS: Public can read translations for active categories. Admins manage.
 
 ### products
 
-Purpose: Public product metadata and generation requirements.
+Purpose: Legacy internal physical table for public preset metadata and generation requirements. Public UI term is Preset.
 
 | Column | Type | Notes |
 | --- | --- | --- |
@@ -299,11 +301,13 @@ Relationships: Category, translations, options, generations, prompt versions.
 
 Indexes: Unique `products(slug)`, `products(category_id, is_active)`, `products(is_featured, sort_order)`.
 
-RLS: Public can read active products and safe visible fields only. Prompt mappings and provider configs must not exist in this table.
+RLS: Public can read active presets and safe visible fields only. Prompt mappings and provider configs must not exist in this table.
+
+Alias: `public.presets` is a non-destructive security-invoker view over this legacy table.
 
 ### product_translations
 
-Purpose: Multilingual public product copy.
+Purpose: Legacy internal physical table for multilingual public preset copy.
 
 | Column | Type | Notes |
 | --- | --- | --- |
@@ -326,7 +330,7 @@ RLS: Public can read translations for active products. Admins manage.
 
 ### product_options
 
-Purpose: Public visible option schema for product forms.
+Purpose: Legacy internal physical table for public visible option schema for preset forms.
 
 | Column | Type | Notes |
 | --- | --- | --- |
@@ -342,13 +346,15 @@ Purpose: Public visible option schema for product forms.
 | created_at | timestamptz | Required. |
 | updated_at | timestamptz | Required. |
 
-Relationships: Product, choices, translations.
+Relationships: Preset, choices, translations.
 
 Indexes: Unique `product_options(product_id, key)`, `product_options(product_id, sort_order)`.
 
 RLS: Public can read active options for active products. No prompt mapping fields here.
 
 ### product_option_choices
+
+Legacy internal physical table for public preset option choices. Alias view: `public.preset_option_choices`.
 
 Purpose: Public visible choices for select/radio/aspect-ratio options.
 
@@ -501,6 +507,10 @@ Purpose: Admin-only model routing and provider settings.
 | id | uuid pk | Default `gen_random_uuid()`. |
 | product_id | uuid | Nullable for global default or product-specific config. |
 | status | model_config_status | Required. |
+| public_option_id | text | Nullable safe public tier id such as `fast` or `premium`; never a provider/model id. |
+| display_name | text | Nullable admin-facing label. |
+| is_default | boolean | Required, default false. One active default per product. |
+| credit_cost_override | integer | Nullable trusted credit cost for this public option; falls back to `products.credit_cost`. |
 | primary_provider | text | Required admin-only. |
 | primary_model | text | Required admin-only. |
 | fallback_provider | text | Nullable admin-only. |
@@ -515,9 +525,11 @@ Purpose: Admin-only model routing and provider settings.
 
 Relationships: Optional product, admin creator, generations.
 
-Indexes: `model_configs(product_id, status)`, partial active config index.
+Indexes: `model_configs(product_id, status)`, `model_configs(product_id, public_option_id, is_active)`, partial unique active config per product/public option, and partial unique default active config per product.
 
 RLS: Admin/service only. API keys must live in environment variables or secret manager, not database rows.
+
+Security: Public clients may submit only the safe `model_option` tier id. Backend code maps it to `model_configs.public_option_id`, keeps provider/model fields hidden, and validates credit cost server-side before provider execution.
 
 ### admin_logs
 

@@ -17,6 +17,7 @@ export type ProcessGenerationResponse =
         | "failed"
         | "provider_adapter_scaffold_ready"
         | "prompt_scaffold_ready"
+        | "real_ai_disabled"
         | "wallet_spend_failed"
         | string;
     };

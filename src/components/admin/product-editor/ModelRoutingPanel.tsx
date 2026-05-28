@@ -24,6 +24,8 @@ export function ModelRoutingPanel({ productDbId }: ModelRoutingPanelProps) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [publicOptionId, setPublicOptionId] = useState("");
+  const [displayName, setDisplayName] = useState("");
   const [primaryProvider, setPrimaryProvider] = useState<"gemini" | "openai">("gemini");
   const [primaryModel, setPrimaryModel] = useState("");
   const [fallbackProvider, setFallbackProvider] = useState<"" | "gemini" | "openai">("");
@@ -33,7 +35,9 @@ export function ModelRoutingPanel({ productDbId }: ModelRoutingPanelProps) {
   const [retryLimit, setRetryLimit] = useState(1);
   const [cleanupEnabled, setCleanupEnabled] = useState(false);
   const [estimatedCostMnt, setEstimatedCostMnt] = useState("");
-  const [setActiveAfterSave, setSetActiveAfterSave] = useState(true);
+  const [creditCostOverride, setCreditCostOverride] = useState("");
+  const [isActive, setIsActive] = useState(true);
+  const [isDefault, setIsDefault] = useState(false);
 
   async function loadConfigs() {
     if (!productDbId) {
@@ -60,6 +64,8 @@ export function ModelRoutingPanel({ productDbId }: ModelRoutingPanelProps) {
 
   function editConfig(config: ModelConfig) {
     setEditingId(config.id);
+    setPublicOptionId(config.public_option_id ?? "");
+    setDisplayName(config.display_name ?? "");
     setPrimaryProvider(config.primary_provider);
     setPrimaryModel(config.primary_model);
     setFallbackProvider(config.fallback_provider ?? "");
@@ -69,11 +75,15 @@ export function ModelRoutingPanel({ productDbId }: ModelRoutingPanelProps) {
     setRetryLimit(config.retry_limit);
     setCleanupEnabled(config.cleanup_enabled);
     setEstimatedCostMnt(config.estimated_cost_mnt?.toString() ?? "");
-    setSetActiveAfterSave(config.is_active);
+    setCreditCostOverride(config.credit_cost_override?.toString() ?? "");
+    setIsActive(config.is_active);
+    setIsDefault(config.is_default);
   }
 
   function resetForm() {
     setEditingId(undefined);
+    setPublicOptionId("");
+    setDisplayName("");
     setPrimaryProvider("gemini");
     setPrimaryModel("");
     setFallbackProvider("");
@@ -83,7 +93,9 @@ export function ModelRoutingPanel({ productDbId }: ModelRoutingPanelProps) {
     setRetryLimit(1);
     setCleanupEnabled(false);
     setEstimatedCostMnt("");
-    setSetActiveAfterSave(true);
+    setCreditCostOverride("");
+    setIsActive(true);
+    setIsDefault(false);
   }
 
   async function handleSave() {
@@ -102,23 +114,24 @@ export function ModelRoutingPanel({ productDbId }: ModelRoutingPanelProps) {
     setSuccess(null);
 
     try {
-      const saved = await upsertModelConfig({
+      await upsertModelConfig({
         cleanupEnabled,
+        creditCostOverride: creditCostOverride ? Number(creditCostOverride) : null,
+        displayName,
         estimatedCostMnt: estimatedCostMnt ? Number(estimatedCostMnt) : null,
         fallbackModel,
         fallbackProvider: fallbackProvider || null,
         id: editingId,
+        isActive,
+        isDefault,
         outputCount,
         outputSize,
         primaryModel,
         primaryProvider,
         productId: productDbId,
+        publicOptionId,
         retryLimit,
       });
-
-      if (setActiveAfterSave) {
-        await setActiveModelConfig(productDbId, saved.id);
-      }
 
       setSuccess(editor.modelConfigSaved);
       resetForm();
@@ -184,7 +197,17 @@ export function ModelRoutingPanel({ productDbId }: ModelRoutingPanelProps) {
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <p className="font-semibold text-white">
-                        {config.primary_provider} / {config.primary_model}
+                        {config.display_name || config.public_option_id || editor.newConfig}
+                      </p>
+                      <p className="mt-1 text-sm text-white/52">
+                        {editor.publicOptionId}: {config.public_option_id ?? editor.none}
+                      </p>
+                      <p className="mt-1 text-sm text-white/52">
+                        {editor.creditCostOverride}:{" "}
+                        {config.credit_cost_override ?? editor.none}
+                      </p>
+                      <p className="mt-1 text-sm text-white/52">
+                        {editor.primaryProvider}: {config.primary_provider}
                       </p>
                       <p className="mt-1 text-sm text-white/52">
                         {editor.fallbackProvider}:{" "}
@@ -199,6 +222,11 @@ export function ModelRoutingPanel({ productDbId }: ModelRoutingPanelProps) {
                       <span className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-white/58">
                         {config.is_active ? editor.active : editor.inactive}
                       </span>
+                      {config.is_default ? (
+                        <span className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-white/58">
+                          {editor.defaultConfig}
+                        </span>
+                      ) : null}
                       <button
                         type="button"
                         disabled={saving}
@@ -207,7 +235,7 @@ export function ModelRoutingPanel({ productDbId }: ModelRoutingPanelProps) {
                       >
                         {t.admin.common.edit}
                       </button>
-                      {!config.is_active ? (
+                      {!config.is_default ? (
                         <button
                           type="button"
                           disabled={saving}
@@ -229,6 +257,26 @@ export function ModelRoutingPanel({ productDbId }: ModelRoutingPanelProps) {
           </div>
 
           <div className="mt-6 grid gap-4 md:grid-cols-2">
+            <label className="grid gap-2 text-sm text-white/52">
+              <span>{editor.publicOptionId}</span>
+              <input
+                className={inputClass}
+                value={publicOptionId}
+                onChange={(event) => setPublicOptionId(event.target.value)}
+                placeholder="fast, premium"
+              />
+            </label>
+
+            <label className="grid gap-2 text-sm text-white/52">
+              <span>{editor.displayName}</span>
+              <input
+                className={inputClass}
+                value={displayName}
+                onChange={(event) => setDisplayName(event.target.value)}
+                placeholder="Fast"
+              />
+            </label>
+
             <label className="grid gap-2 text-sm text-white/52">
               <span>{editor.primaryProvider}</span>
               <select
@@ -319,6 +367,17 @@ export function ModelRoutingPanel({ productDbId }: ModelRoutingPanelProps) {
               />
             </label>
 
+            <label className="grid gap-2 text-sm text-white/52">
+              <span>{editor.creditCostOverride}</span>
+              <input
+                className={inputClass}
+                value={creditCostOverride}
+                onChange={(event) => setCreditCostOverride(event.target.value)}
+                type="number"
+                min="1"
+              />
+            </label>
+
             <label className="flex h-11 items-center justify-between rounded-2xl border border-white/10 bg-black/40 px-4 text-sm text-white/60">
               <span>{editor.cleanupEnabled}</span>
               <input
@@ -333,11 +392,22 @@ export function ModelRoutingPanel({ productDbId }: ModelRoutingPanelProps) {
               <span>{editor.activeConfig}</span>
               <input
                 type="checkbox"
-                checked={setActiveAfterSave}
-                onChange={(event) => setSetActiveAfterSave(event.target.checked)}
+                checked={isActive}
+                onChange={(event) => setIsActive(event.target.checked)}
                 className="h-4 w-4 accent-white"
               />
             </label>
+
+            <label className="flex h-11 items-center justify-between rounded-2xl border border-white/10 bg-black/40 px-4 text-sm text-white/60">
+              <span>{editor.defaultConfig}</span>
+              <input
+                type="checkbox"
+                checked={isDefault}
+                onChange={(event) => setIsDefault(event.target.checked)}
+                className="h-4 w-4 accent-white"
+              />
+            </label>
+
           </div>
         </>
       )}

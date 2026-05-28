@@ -59,14 +59,18 @@ type PromptVersionRecord = {
 
 type ModelConfigRecord = {
   cleanup_enabled: boolean;
+  credit_cost_override: number | null;
+  display_name: string | null;
   estimated_cost_mnt: number | null;
   fallback_model: string | null;
   fallback_provider: string | null;
   id: string;
+  is_default: boolean;
   output_count: number;
   output_size: string | null;
   primary_model: string;
   primary_provider: ProviderName;
+  public_option_id: string | null;
   retry_limit: number;
 };
 
@@ -85,6 +89,7 @@ const uuidPattern =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const allowedStatuses = new Set(["queued", "processing", "credit_reserved"]);
+const publicOptionIdPattern = /^[a-z0-9][a-z0-9_-]{0,63}$/;
 const terminalStatusMessages: Record<string, string> = {
   canceled: "Generation was canceled.",
   completed: "Generation is already completed.",
@@ -177,6 +182,7 @@ async function failGenerationAndRefund(input: {
   generation: GenerationRecord;
   message: string;
   metadata?: Record<string, unknown>;
+  responseStatus?: number;
   serviceClient: ReturnType<typeof createClient>;
 }) {
   await updateGeneration(input.serviceClient, input.generation.id, {
@@ -218,8 +224,57 @@ async function failGenerationAndRefund(input: {
       message: input.message,
       ok: false,
     },
-    500,
+    input.responseStatus ?? 500,
   );
+}
+
+async function disableRealAiAndRefund(input: {
+  generation: GenerationRecord;
+  serviceClient: ReturnType<typeof createClient>;
+}) {
+  const message = "Real AI generation is disabled for cost safety.";
+
+  await updateGeneration(input.serviceClient, input.generation.id, {
+    error_code: "real_ai_disabled",
+    error_message: message,
+    metadata: {
+      ...(input.generation.metadata ?? {}),
+      costSafetyMode: true,
+      failedAt: new Date().toISOString(),
+    },
+    status: "failed",
+  });
+
+  try {
+    await refundReservedCredits(input.serviceClient, input.generation, message);
+  } catch {
+    await updateGeneration(input.serviceClient, input.generation.id, {
+      metadata: {
+        ...(input.generation.metadata ?? {}),
+        costSafetyMode: true,
+        failedAt: new Date().toISOString(),
+        wallet_refund_failed: true,
+      },
+    });
+
+    return jsonResponse(
+      {
+        error: "wallet_refund_failed",
+        message: "Real AI is disabled, but refund requires admin recovery.",
+        ok: false,
+        status: "real_ai_disabled",
+      },
+      500,
+    );
+  }
+
+  return jsonResponse({
+    dryRun: true,
+    generationId: input.generation.id,
+    message,
+    ok: false,
+    status: "real_ai_disabled",
+  });
 }
 
 function normalizeOptionInputs(inputs: GenerationInputRecord[]) {
@@ -241,6 +296,16 @@ function normalizeUploadInputs(inputs: GenerationInputRecord[]) {
         typeof input.metadata?.mimeType === "string" ? input.metadata.mimeType : undefined,
       storagePath: input.storage_path as string,
     }));
+}
+
+function getSelectedModelOptionId(inputs: GenerationInputRecord[]) {
+  const value = inputs.find(
+    (input) =>
+      input.input_type === "option" && input.option_key === "model_option",
+  )?.option_value;
+  const selected = value?.trim();
+
+  return selected || null;
 }
 
 function compilePrompt(input: {
@@ -293,7 +358,8 @@ Deno.serve(async (request) => {
     return jsonResponse({ error: "invalid_generation_id", ok: false }, 400);
   }
 
-  const dryRun = body.dryRun === true;
+  const realAiEnabled = Deno.env.get("ENABLE_REAL_AI_GENERATION") === "true";
+  const dryRun = body.dryRun === true || !realAiEnabled;
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -386,7 +452,7 @@ Deno.serve(async (request) => {
     return jsonResponse(
       {
         error: "product_not_active",
-        message: "Product is not active.",
+        message: "Preset is not active.",
         ok: false,
       },
       409,
@@ -482,24 +548,97 @@ Deno.serve(async (request) => {
   }
 
   const promptVersion = safePromptVersions[0];
+  const optionInputs = normalizeOptionInputs(safeInputs);
+  const uploadInputs = normalizeUploadInputs(safeInputs);
+  const selectedModelOptionId = getSelectedModelOptionId(safeInputs);
 
-  const { data: modelConfigs, error: modelConfigError } = await serviceClient
-    .from("model_configs")
-    .select(
-      "id,primary_provider,primary_model,fallback_provider,fallback_model,output_size,output_count,retry_limit,cleanup_enabled,estimated_cost_mnt",
-    )
-    .eq("product_id", generation.product_id)
-    .eq("is_active", true)
-    .limit(2);
-
-  if (modelConfigError) {
-    console.error("model config lookup failed", modelConfigError.message);
-    return jsonResponse({ error: "model_config_lookup_failed", ok: false }, 500);
+  if (
+    selectedModelOptionId &&
+    !publicOptionIdPattern.test(selectedModelOptionId)
+  ) {
+    return await failGenerationAndRefund({
+      code: "model_option_not_configured",
+      generation,
+      message: "Selected model option is not configured.",
+      metadata: {
+        selectedModelOptionId,
+      },
+      responseStatus: 409,
+      serviceClient,
+    });
   }
 
-  const safeModelConfigs = (modelConfigs ?? []) as ModelConfigRecord[];
+  const modelConfigSelect =
+    "id,primary_provider,primary_model,fallback_provider,fallback_model,output_size,output_count,retry_limit,cleanup_enabled,estimated_cost_mnt,public_option_id,display_name,is_default,credit_cost_override";
 
-  if (safeModelConfigs.length === 0) {
+  let modelConfig: ModelConfigRecord | null = null;
+
+  if (selectedModelOptionId) {
+    const { data, error } = await serviceClient
+      .from("model_configs")
+      .select(modelConfigSelect)
+      .eq("product_id", generation.product_id)
+      .eq("public_option_id", selectedModelOptionId)
+      .eq("is_active", true)
+      .maybeSingle<ModelConfigRecord>();
+
+    if (error) {
+      console.error("model option config lookup failed", error.message);
+      return jsonResponse({ error: "model_config_lookup_failed", ok: false }, 500);
+    }
+
+    modelConfig = data;
+
+    if (!modelConfig) {
+      return await failGenerationAndRefund({
+        code: "model_option_not_configured",
+        generation,
+        message: "Selected model option is not configured.",
+        metadata: {
+          selectedModelOptionId,
+        },
+        responseStatus: 409,
+        serviceClient,
+      });
+    }
+  } else {
+    const { data: defaultConfig, error: defaultConfigError } = await serviceClient
+      .from("model_configs")
+      .select(modelConfigSelect)
+      .eq("product_id", generation.product_id)
+      .eq("is_active", true)
+      .eq("is_default", true)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle<ModelConfigRecord>();
+
+    if (defaultConfigError) {
+      console.error("default model config lookup failed", defaultConfigError.message);
+      return jsonResponse({ error: "model_config_lookup_failed", ok: false }, 500);
+    }
+
+    modelConfig = defaultConfig;
+
+    if (!modelConfig) {
+      const { data: fallbackConfig, error: fallbackConfigError } = await serviceClient
+        .from("model_configs")
+        .select(modelConfigSelect)
+        .eq("product_id", generation.product_id)
+        .eq("is_active", true)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle<ModelConfigRecord>();
+
+      if (fallbackConfigError) {
+        console.error("fallback model config lookup failed", fallbackConfigError.message);
+        return jsonResponse({ error: "model_config_lookup_failed", ok: false }, 500);
+      }
+
+      modelConfig = fallbackConfig;
+    }
+  }
+
+  if (!modelConfig) {
     return jsonResponse(
       {
         error: "active_model_config_missing",
@@ -510,15 +649,22 @@ Deno.serve(async (request) => {
     );
   }
 
-  if (safeModelConfigs.length > 1) {
-    console.error("multiple active model configs found", {
-      productId: generation.product_id,
+  const expectedCreditCost =
+    modelConfig.credit_cost_override ?? product.credit_cost;
+
+  if (generation.credit_cost !== expectedCreditCost) {
+    return await failGenerationAndRefund({
+      code: "credit_cost_mismatch",
+      generation,
+      message: "Generation credit cost does not match the selected model option.",
+      metadata: {
+        expectedCreditCost,
+        selectedModelOptionId,
+      },
+      responseStatus: 409,
+      serviceClient,
     });
   }
-
-  const modelConfig = safeModelConfigs[0];
-  const optionInputs = normalizeOptionInputs(safeInputs);
-  const uploadInputs = normalizeUploadInputs(safeInputs);
 
   let promptDraft: PromptDraft;
 
@@ -548,6 +694,13 @@ Deno.serve(async (request) => {
       },
       409,
     );
+  }
+
+  if (!realAiEnabled) {
+    return await disableRealAiAndRefund({
+      generation,
+      serviceClient,
+    });
   }
 
   let adapter;
@@ -648,7 +801,7 @@ Deno.serve(async (request) => {
         "Provider adapter scaffold is ready. Dry-run mode did not call an AI provider.",
       next: "real_provider_adapter",
       ok: false,
-      product: {
+      preset: {
         id: product.id,
         name: preferredTranslation?.name ?? product.slug,
         slug: product.slug,

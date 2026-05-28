@@ -1,4 +1,5 @@
 import type { FormEvent } from "react";
+import { LoaderCircle } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AuthCard } from "../components/auth/AuthCard";
@@ -88,7 +89,14 @@ export function LoginPage() {
               disabled={isSubmitting}
               className="mt-2 h-12 rounded-full bg-white text-sm font-semibold text-black transition hover:-translate-y-0.5 hover:bg-white/90 disabled:cursor-not-allowed disabled:bg-white/24 disabled:text-white/42"
             >
-              {isSubmitting ? t.auth.loading : t.auth.loginButton}
+              {isSubmitting ? (
+                <span className="inline-flex items-center justify-center gap-2">
+                  <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
+                  {t.auth.signingIn}
+                </span>
+              ) : (
+                t.auth.loginButton
+              )}
             </button>
           </form>
           <p className="mt-6 text-center text-sm text-white/48">

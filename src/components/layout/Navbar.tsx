@@ -1,25 +1,107 @@
-import { Images, LayoutDashboard, LogIn, LogOut } from "lucide-react";
-import { useState } from "react";
+import {
+  CreditCard,
+  Image,
+  LayoutDashboard,
+  LogIn,
+  LogOut,
+  Settings,
+  Wallet,
+} from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import { useLanguage } from "../../hooks/useLanguage";
 import { languages } from "../../i18n/translations";
 
+function getInitials(nameOrEmail: string) {
+  const source = nameOrEmail.trim();
+  if (!source) return "C";
+
+  const [first, second] = source.includes("@")
+    ? [source.charAt(0) || "C"]
+    : source.split(/\s+/);
+
+  return `${first?.charAt(0) || "C"}${second?.charAt(0) || ""}`.toUpperCase();
+}
+
 export function Navbar() {
   const { profile, signOut, user } = useAuth();
   const { language, setLanguage, t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
+  const [isAccountOpen, setIsAccountOpen] = useState(false);
+  const accountRef = useRef<HTMLDivElement | null>(null);
   const accountLabel = profile?.full_name || user?.email || "";
-  const navItems = [
-    { label: t.nav.product, to: "/products" },
-    { label: t.nav.howItWorks, to: "/#how-it-works" },
-    { label: t.nav.pricing, to: "/pricing" },
-    { label: t.nav.showcase, to: "/#showcase" },
-    { label: t.nav.faq, to: "/#faq" },
+  const avatarUrl =
+    (profile as { avatar_url?: string } | null)?.avatar_url ||
+    (user?.user_metadata?.avatar_url as string | undefined);
+  const initials = getInitials(accountLabel);
+  const navItems = useMemo(
+    () => [
+      {
+        hidden: false,
+        key: "image-presets",
+        label: t.nav.image,
+        to: "/products",
+      },
+      {
+        hidden: true,
+        key: "video-presets",
+        label: t.nav.videoPresets,
+        to: "/video",
+      },
+    ],
+    [t.nav.image, t.nav.videoPresets],
+  );
+  const accountItems = [
+    {
+      icon: <LayoutDashboard className="h-4 w-4" aria-hidden="true" />,
+      label: t.nav.dashboard,
+      to: "/dashboard",
+    },
+    {
+      icon: <Image className="h-4 w-4" aria-hidden="true" />,
+      label: t.nav.myCreations,
+      to: "/my-images",
+    },
+    {
+      icon: <Wallet className="h-4 w-4" aria-hidden="true" />,
+      label: t.nav.wallet,
+      to: "/dashboard",
+    },
+    {
+      icon: <CreditCard className="h-4 w-4" aria-hidden="true" />,
+      label: t.nav.buyCredits,
+      to: "/pricing",
+    },
   ];
 
+  useEffect(() => {
+    function handlePointerDown(event: MouseEvent) {
+      if (
+        accountRef.current &&
+        !accountRef.current.contains(event.target as Node)
+      ) {
+        setIsAccountOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, []);
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsAccountOpen(false);
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   return (
-    <header className="fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-black/62 backdrop-blur-2xl">
+    <header className="fixed inset-x-0 top-0 z-[100] border-b border-white/10 bg-black/85 backdrop-blur-2xl">
       <nav className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
         <Link
           to="/"
@@ -29,15 +111,17 @@ export function Navbar() {
         </Link>
 
         <div className="hidden items-center justify-center gap-7 text-sm text-white/68 lg:flex">
-          {navItems.map((item) => (
-            <Link
-              key={item.to}
-              to={item.to}
-              className="transition hover:text-white"
-            >
-              {item.label}
-            </Link>
-          ))}
+          {navItems
+            .filter((item) => !item.hidden)
+            .map((item) => (
+              <Link
+                key={item.key}
+                to={item.to}
+                className="transition hover:text-white"
+              >
+                {item.label}
+              </Link>
+            ))}
         </div>
 
         <div className="flex items-center gap-2">
@@ -59,34 +143,87 @@ export function Navbar() {
           </div>
 
           {user ? (
-            <div className="hidden items-center gap-2 sm:flex">
-              <Link
-                to="/dashboard"
-                className="inline-flex h-10 items-center gap-2 rounded-full px-3 text-sm font-medium text-white/58 transition hover:text-white"
-              >
-                <LayoutDashboard className="h-4 w-4" aria-hidden="true" />
-                {t.nav.dashboard}
-              </Link>
-              <Link
-                to="/my-images"
-                className="hidden h-10 items-center gap-2 rounded-full px-3 text-sm font-medium text-white/58 transition hover:text-white xl:inline-flex"
-              >
-                <Images className="h-4 w-4" aria-hidden="true" />
-                {t.nav.myImages}
-              </Link>
-              {accountLabel ? (
-                <span className="hidden max-w-36 truncate text-xs text-white/38 xl:inline">
-                  {accountLabel}
-                </span>
-              ) : null}
+            <div className="relative z-[120] hidden sm:block" ref={accountRef}>
               <button
                 type="button"
-                className="inline-flex h-10 items-center gap-2 rounded-full px-3 text-sm font-medium text-white/58 transition hover:text-white"
-                onClick={() => signOut()}
+                className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-white/15 bg-neutral-950 text-sm font-semibold text-white/90 shadow-lg shadow-black/30 transition hover:border-white/25 hover:bg-neutral-900"
+                aria-label={t.nav.accountMenu}
+                aria-expanded={isAccountOpen}
+                onClick={() => setIsAccountOpen((current) => !current)}
               >
-                <LogOut className="h-4 w-4" aria-hidden="true" />
-                {t.nav.logout}
+                {avatarUrl ? (
+                  <img
+                    src={avatarUrl}
+                    alt=""
+                    className="h-full w-full object-cover"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  initials
+                )}
               </button>
+
+              {isAccountOpen ? (
+                <div className="absolute right-0 top-full z-[999] mt-3 w-72 max-w-[calc(100vw-2rem)] rounded-2xl border border-white/10 bg-black p-2 shadow-2xl shadow-black/70">
+                  <div className="flex items-center gap-3 border-b border-white/10 px-3 py-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-black text-sm font-semibold text-white/90">
+                      {avatarUrl ? (
+                        <img
+                          src={avatarUrl}
+                          alt=""
+                          className="h-full w-full object-cover"
+                          referrerPolicy="no-referrer"
+                        />
+                      ) : (
+                        initials
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-white/90">
+                        {accountLabel}
+                      </p>
+                      <p className="mt-1 text-xs text-white/50">
+                        {t.nav.accountMenu}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="py-2">
+                    {accountItems.map((item) => (
+                      <Link
+                        key={item.label}
+                        to={item.to}
+                        className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-white/70 transition hover:bg-white/[0.05] hover:text-white [&_svg]:text-white/60 [&_svg]:transition hover:[&_svg]:text-white"
+                        onClick={() => setIsAccountOpen(false)}
+                      >
+                        {item.icon}
+                        {item.label}
+                      </Link>
+                    ))}
+                    <button
+                      type="button"
+                      className="flex w-full cursor-not-allowed items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-white/30 [&_svg]:text-white/30"
+                      disabled
+                    >
+                      <Settings className="h-4 w-4" aria-hidden="true" />
+                      {t.nav.settings}
+                      <span className="ml-auto rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[0.62rem] font-semibold uppercase tracking-[0.12em] text-white/42">
+                        {t.nav.comingSoon}
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-white/70 transition hover:bg-white/[0.05] hover:text-white [&_svg]:text-white/60 [&_svg]:transition hover:[&_svg]:text-white"
+                      onClick={() => {
+                        setIsAccountOpen(false);
+                        signOut();
+                      }}
+                    >
+                      <LogOut className="h-4 w-4" aria-hidden="true" />
+                      {t.nav.logout}
+                    </button>
+                  </div>
+                </div>
+              ) : null}
             </div>
           ) : (
             <Link
@@ -112,16 +249,18 @@ export function Navbar() {
       {isOpen ? (
         <div className="border-t border-white/10 bg-black/94 px-4 py-4 lg:hidden">
           <div className="mx-auto flex max-w-7xl flex-col gap-3">
-            {navItems.map((item) => (
-              <Link
-                key={item.to}
-                to={item.to}
-                className="rounded-2xl border border-white/10 bg-white/[0.035] px-4 py-3 text-sm text-white/72"
-                onClick={() => setIsOpen(false)}
-              >
-                {item.label}
-              </Link>
-            ))}
+            {navItems
+              .filter((item) => !item.hidden)
+              .map((item) => (
+                <Link
+                  key={item.key}
+                  to={item.to}
+                  className="rounded-2xl border border-white/10 bg-white/[0.035] px-4 py-3 text-sm text-white/72"
+                  onClick={() => setIsOpen(false)}
+                >
+                  {item.label}
+                </Link>
+              ))}
 
             <div className="flex items-center rounded-2xl border border-white/10 bg-white/[0.035] p-1">
               {languages.map((item) => (
@@ -141,26 +280,32 @@ export function Navbar() {
             </div>
 
             {user ? (
-              <>
-                <Link
-                  to="/dashboard"
-                  className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.02] px-4 py-3 text-left text-sm text-white/58"
-                  onClick={() => setIsOpen(false)}
-                >
-                  <LayoutDashboard className="h-4 w-4" aria-hidden="true" />
-                  {t.nav.dashboard}
-                </Link>
-                <Link
-                  to="/my-images"
-                  className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.02] px-4 py-3 text-left text-sm text-white/58"
-                  onClick={() => setIsOpen(false)}
-                >
-                  <Images className="h-4 w-4" aria-hidden="true" />
-                  {t.nav.myImages}
-                </Link>
+              <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-2">
+                <div className="px-2 py-2 text-xs text-white/42">
+                  {accountLabel}
+                </div>
+                {accountItems.map((item) => (
+                  <Link
+                    key={item.label}
+                    to={item.to}
+                    className="flex items-center gap-2 rounded-xl px-3 py-3 text-sm text-white/62"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    {item.icon}
+                    {item.label}
+                  </Link>
+                ))}
                 <button
                   type="button"
-                  className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.02] px-4 py-3 text-left text-sm text-white/58"
+                  className="flex w-full items-center gap-2 rounded-xl px-3 py-3 text-left text-sm text-white/38"
+                  disabled
+                >
+                  <Settings className="h-4 w-4" aria-hidden="true" />
+                  {t.nav.settings}
+                </button>
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2 rounded-xl px-3 py-3 text-left text-sm text-white/62"
                   onClick={() => {
                     setIsOpen(false);
                     signOut();
@@ -169,7 +314,7 @@ export function Navbar() {
                   <LogOut className="h-4 w-4" aria-hidden="true" />
                   {t.nav.logout}
                 </button>
-              </>
+              </div>
             ) : (
               <Link
                 to="/login"

@@ -40,8 +40,11 @@ Users should see simple messages:
 
 - Generation is processing.
 - Generation failed and credits were refunded.
+- For `provider_rate_limit`: "Gemini usage limit has been reached temporarily. Please wait and try again."
 - Generation failed and support/admin review is needed.
 - Output is ready.
+
+For rate limits, the frontend should not auto-retry immediately. The backend should mark the generation failed, refund reserved credits with `refund:{generationId}`, and let the user retry later after the provider quota window resets.
 
 Users should not see:
 
@@ -143,6 +146,8 @@ The Gemini adapter implementation spec adds provider-specific planning for:
 - `output_storage_failed`
 
 Safety blocks must fail the generation, refund reserved credits, and return only a user-safe message. Do not bypass provider safety systems, and do not expose raw safety payloads to users.
+
+`provider_rate_limit` is retryable later, but not immediately in the browser. The UI should tell users to wait and try again, and should indicate that credits were refunded when wallet settlement succeeded.
 
 See:
 

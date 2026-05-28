@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { LoaderCircle } from "lucide-react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import { useLanguage } from "../../hooks/useLanguage";
@@ -19,9 +20,9 @@ export function ProtectedRoute({
   if (loading) {
     return (
       <div className="grid min-h-screen place-items-center bg-ink px-4 text-center text-white">
-        <div>
-          <p className="text-xl font-semibold">{t.auth.loading}</p>
-          <p className="mt-3 text-sm text-white/46">{t.auth.loadingHint}</p>
+        <div className="grid justify-items-center gap-4">
+          <LoaderCircle className="h-7 w-7 animate-spin text-white/80" aria-hidden="true" />
+          <p className="text-sm font-medium text-white/58">{t.auth.pleaseWait}</p>
         </div>
       </div>
     );

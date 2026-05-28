@@ -1,5 +1,5 @@
 import { ArrowLeft } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { CreditSummary } from "../components/generate/CreditSummary";
 import { GenerateForm } from "../components/generate/GenerateForm";
@@ -21,12 +21,31 @@ export function GeneratePage() {
     "idle" | "queued" | "processing" | "completed" | "failed"
   >("idle");
   const [generationId, setGenerationId] = useState<string | null>(null);
+  const [selectedModelOptionId, setSelectedModelOptionId] = useState<
+    string | null
+  >(null);
   const { productSlug } = useParams();
   const { language, t } = useLanguage();
   const product = productSlug ? getProductBySlug(productSlug) : undefined;
   const category = product
     ? categories.find((item) => item.slug === product.categorySlug)
     : undefined;
+  const defaultModelOptionId = useMemo(() => {
+    if (!product?.modelOptions?.length) return null;
+    return (
+      product.modelOptions.find((option) => option.isDefault)?.id ??
+      product.modelOptions[0].id
+    );
+  }, [product]);
+  const selectedModelOption =
+    product?.modelOptions?.find((option) => option.id === selectedModelOptionId) ??
+    product?.modelOptions?.find((option) => option.id === defaultModelOptionId);
+  const selectedCreditCost =
+    selectedModelOption?.creditCost ?? product?.creditCost ?? 0;
+
+  useEffect(() => {
+    setSelectedModelOptionId(defaultModelOptionId);
+  }, [defaultModelOptionId]);
 
   useEffect(() => {
     let isMounted = true;
@@ -119,6 +138,8 @@ export function GeneratePage() {
                 <GenerateForm
                   language={language}
                   product={product}
+                  selectedCreditCost={selectedCreditCost}
+                  selectedModelOptionId={selectedModelOption?.id ?? null}
                   userId={user?.id}
                   labels={{
                     aiGenerationNextPhase: t.generate.aiGenerationNextPhase,
@@ -126,6 +147,8 @@ export function GeneratePage() {
                     clickToUpload: t.generate.clickToUpload,
                     createFailed: t.generate.createFailed,
                     createGenerationRecord: t.generate.createGenerationRecord,
+                    credit: t.productsPage.credit,
+                    credits: t.productsPage.credits,
                     dropzoneDescription: t.generate.dropzoneDescription,
                     dropzoneTitle: t.generate.dropzoneTitle,
                     failed: t.generate.failed,
@@ -142,12 +165,15 @@ export function GeneratePage() {
                     maxFileSize: t.generate.maxFileSize,
                     maximumImageRequirement: t.generate.maximumImageRequirement,
                     minimumImageRequirement: t.generate.minimumImageRequirement,
+                    modelBackendMappingLater: t.generate.modelBackendMappingLater,
+                    modelOption: t.generate.modelOption,
                     noAiGenerationNotice: t.generate.noAiGenerationNotice,
                     noCreditDeductedNotice: t.generate.noCreditDeductedNotice,
                     optionsTitle: t.generate.optionsTitle,
                     productDbIdMissing: t.generate.productDbIdMissing,
                     readyToCreate: t.generate.readyToCreate,
                     recordCreatedAfterReserve: t.generate.recordCreatedAfterReserve,
+                    realAiDisabled: t.generate.realAiDisabled,
                     remove: t.generate.remove,
                     refundAttempted: t.generate.refundAttempted,
                     required: t.generate.required,
@@ -157,11 +183,14 @@ export function GeneratePage() {
                     reserveFailed: t.generate.reserveFailed,
                     reserveSuccess: t.generate.reserveSuccess,
                     pollingStatus: t.generate.pollingStatus,
+                    providerRateLimit: t.generate.providerRateLimit,
+                    providerFailureRefunded: t.generate.providerFailureRefunded,
                     processGenerationFailed: t.generate.processGenerationFailed,
                     processingGeneration: t.generate.processingGeneration,
                     retryingStatus: t.generate.retryingStatus,
                     safeErrorMessage: t.generate.safeErrorMessage,
                     selected: t.generate.selected,
+                    selectModel: t.generate.selectModel,
                     statusAddedToQueue: t.generate.statusAddedToQueue,
                     statusAiBackendCalled: t.generate.statusAiBackendCalled,
                     statusAiBackendPending: t.generate.statusAiBackendPending,
@@ -191,6 +220,7 @@ export function GeneratePage() {
                   walletError={walletError}
                   walletLoading={walletLoading}
                   onGenerationIdChange={setGenerationId}
+                  onModelOptionChange={setSelectedModelOptionId}
                   onWalletChange={setWallet}
                   onStatusChange={setGenerationStatus}
                 />
@@ -213,7 +243,7 @@ export function GeneratePage() {
               </section>
 
               <CreditSummary
-                creditCost={product.creditCost}
+                creditCost={selectedCreditCost}
                 labels={{
                   creditCost: t.generate.creditCost,
                   creditNotice: t.generate.creditNotice,
@@ -241,7 +271,7 @@ export function GeneratePage() {
                 completedDescription={t.generate.outputPreviewNextPhase}
                 downloadLabel={t.generate.downloadOutput}
                 failedTitle={t.generate.generationFailed}
-                failedDescription={t.generate.safeErrorMessage}
+                failedDescription={t.generate.providerFailureRefunded}
                 generatedAtLabel={t.generate.generatedAt}
                 generationId={generationId}
                 loadingOutputLabel={t.generate.loadingOutputImage}

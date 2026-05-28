@@ -137,6 +137,38 @@ export function ProductDetailPage() {
             </section>
           ) : null}
 
+          {product.modelOptions && product.modelOptions.length > 0 ? (
+            <section className="mt-14">
+              <h2 className="text-2xl font-semibold">
+                {t.productDetail.modelOptions}
+              </h2>
+              <div className="mt-5 grid gap-4 md:grid-cols-2">
+                {product.modelOptions.map((option) => (
+                  <article
+                    key={option.id}
+                    className="rounded-[1.5rem] border border-white/10 bg-white/[0.035] p-5"
+                  >
+                    <Sparkles className="mb-4 h-5 w-5 text-white/52" aria-hidden="true" />
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="font-semibold">{option.name[language]}</p>
+                      {option.badge ? (
+                        <span className="rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-white/62">
+                          {option.badge[language]}
+                        </span>
+                      ) : null}
+                    </div>
+                    <p className="mt-3 leading-7 text-white/56">
+                      {option.description[language]}
+                    </p>
+                    <p className="mt-4 text-sm font-semibold text-white/76">
+                      {t.productDetail.creditCost}: {option.creditCost}
+                    </p>
+                  </article>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
           <section className="mt-14">
             <h2 className="text-2xl font-semibold">
               {t.productDetail.outputExamples}

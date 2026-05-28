@@ -12,7 +12,29 @@
   - `SUPABASE_URL`
   - `SUPABASE_SERVICE_ROLE_KEY`
   - `GEMINI_API_KEY` before real provider testing
+  - `ENABLE_REAL_AI_GENERATION=true` only during deliberate real provider testing
 - No AI keys use the `VITE_` prefix.
+
+## Cost-Safe Execution Guard
+
+- Default Edge Function behavior keeps real AI generation disabled.
+- If `ENABLE_REAL_AI_GENERATION` is missing or not exactly `true`, `process-generation` must not call Gemini.
+- Disabled real AI calls return `real_ai_disabled`.
+- Disabled real AI calls refund reserved credits with `refund:{generationId}`.
+- The frontend should show the cost-safety disabled message and should not imply an output was generated.
+- Enable real provider execution only for controlled tests:
+
+```bash
+supabase secrets set ENABLE_REAL_AI_GENERATION=true
+supabase functions deploy process-generation
+```
+
+- Disable real provider execution after testing:
+
+```bash
+supabase secrets set ENABLE_REAL_AI_GENERATION=false
+supabase functions deploy process-generation
+```
 
 ## Gemini Key Pending State
 
@@ -80,11 +102,15 @@ users/{userId}/uploads/{timestamp}-{safeFileName}
 - Multi-image request can be assembled.
 - Gemini adapter follows `gemini-adapter-implementation-spec.md`.
 - Real Gemini request succeeds when `GEMINI_API_KEY` is configured.
+- Real Gemini request is attempted only when `ENABLE_REAL_AI_GENERATION=true`.
 - Dry-run request still works with `dryRun: true`.
 - Unsupported MIME fails safely.
 - Provider timeout is classified.
 - Provider safety block is classified.
 - Provider rate limit is classified.
+- `provider_rate_limit` shows a localized wait-and-retry message in the frontend.
+- `provider_rate_limit` does not trigger immediate browser auto-retry.
+- Failed rate-limited generations refund reserved credits with `refund:{generationId}`.
 
 ## Output And Wallet Settlement
 
@@ -119,6 +145,7 @@ users/{userId}/generations/{generationId}/outputs/{outputIndex}.png
 - Polling stops on completed/failed/refunded/canceled states or timeout.
 - Completed UI confirms output is saved but does not fetch a signed URL yet.
 - Failed UI shows a safe error and notes backend refund handling may have been attempted.
+- Rate-limit UI tells users to wait before retrying and confirms credits are restored when refund succeeds.
 - Browser source contains no AI provider keys or service role key.
 
 ## Phase 14E Signed Output Preview Checks

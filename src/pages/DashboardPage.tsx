@@ -1,4 +1,4 @@
-import { CreditCard, Images, Package, Sparkles } from "lucide-react";
+import { CreditCard, Image, Package, ShieldCheck, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 import { QuickActionCard } from "../components/dashboard/QuickActionCard";
 import { StatCard } from "../components/dashboard/StatCard";
@@ -9,7 +9,7 @@ import { useLanguage } from "../hooks/useLanguage";
 import { getOrCreateWallet, type Wallet } from "../lib/wallet";
 
 export function DashboardPage() {
-  const { profile, signOut, user } = useAuth();
+  const { profile, user } = useAuth();
   const { t } = useLanguage();
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [walletError, setWalletError] = useState<string | null>(null);
@@ -43,7 +43,7 @@ export function DashboardPage() {
   const stats = [
     { label: t.dashboard.creditBalance, value: wallet?.balance ?? 0, icon: <CreditCard className="h-5 w-5" /> },
     { label: t.dashboard.reservedBalance, value: wallet?.reserved_balance ?? 0, icon: <CreditCard className="h-5 w-5" /> },
-    { label: t.dashboard.generatedImages, value: 0, icon: <Images className="h-5 w-5" /> },
+    { label: t.dashboard.generatedImages, value: 0, icon: <Image className="h-5 w-5" /> },
     { label: t.dashboard.favoriteProduct, value: "-", icon: <Sparkles className="h-5 w-5" /> },
     { label: t.dashboard.currentPlan, value: t.dashboard.trial, icon: <Package className="h-5 w-5" /> },
   ];
@@ -63,13 +63,6 @@ export function DashboardPage() {
             <p className="mt-5 text-lg leading-8 text-white/62">
               {t.dashboard.intro}
             </p>
-            <button
-              type="button"
-              className="mt-6 rounded-full border border-white/12 px-5 py-3 text-sm font-semibold text-white/62 transition hover:border-white/24 hover:text-white"
-              onClick={() => signOut()}
-            >
-              {t.dashboard.logout}
-            </button>
           </div>
 
           <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -95,6 +88,15 @@ export function DashboardPage() {
                 <QuickActionCard label={t.dashboard.browseProducts} to="/products" />
                 <QuickActionCard label={t.dashboard.myImages} to="/my-images" />
                 <QuickActionCard label={t.dashboard.buyCredits} to="/pricing" />
+              </div>
+              <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.035] p-5">
+                <div className="flex items-center gap-3 text-sm font-semibold text-white">
+                  <ShieldCheck className="h-4 w-4" aria-hidden="true" />
+                  {t.dashboard.costSafeTitle}
+                </div>
+                <p className="mt-3 text-sm leading-6 text-white/50">
+                  {t.dashboard.costSafeNotice}
+                </p>
               </div>
             </section>
 
