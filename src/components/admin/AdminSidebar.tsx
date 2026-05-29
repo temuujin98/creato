@@ -7,6 +7,7 @@ import {
   Images,
   LayoutDashboard,
   Package,
+  ReceiptText,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { useLanguage } from "../../hooks/useLanguage";
@@ -24,6 +25,7 @@ export function AdminSidebar() {
     { label: t.admin.sidebar.generations, to: "/admin/generations", icon: Images },
     { label: t.admin.sidebar.modelSettings, to: "/admin/model-settings", icon: Cpu },
     { label: t.admin.sidebar.analytics, to: "/admin/analytics", icon: BarChart3 },
+    { label: t.admin.sidebar.payments, to: "/admin/payments", icon: ReceiptText },
   ];
 
   return (
