@@ -1,4 +1,6 @@
 import { supabase } from "./supabase";
+import type { PaymentCheckoutResponse, PaymentProviderKey } from "./paymentProviders/types";
+import { manualAdapter } from "./paymentProviders/manualAdapter";
 
 export type PaymentStatus = "pending" | "paid" | "failed" | "canceled" | "expired" | "refunded";
 
@@ -79,6 +81,33 @@ export async function listUserPayments(): Promise<PaymentOrder[]> {
   if (error) throw new Error("Could not load payment orders.");
 
   return ((data ?? []) as PaymentOrderRow[]).map(toPaymentOrder);
+}
+
+export type PaymentCheckoutResult = {
+  order: PaymentOrder;
+  checkout: PaymentCheckoutResponse;
+};
+
+export async function createPaymentCheckout(
+  packageId: string,
+  provider: PaymentProviderKey = "manual",
+): Promise<PaymentCheckoutResult> {
+  if (provider !== "manual") {
+    throw new Error("payment_provider_not_configured");
+  }
+
+  const order = await createPaymentOrder(packageId);
+
+  const checkout = await manualAdapter.createCheckout({
+    paymentId: order.id,
+    amountMnt: order.amountMnt,
+    credits: order.credits,
+    packageCode: order.packageCode ?? "",
+    packageName: order.packageName ?? "",
+    currency: order.currency,
+  });
+
+  return { order, checkout };
 }
 
 export async function cancelOwnPaymentOrder(

@@ -16,6 +16,10 @@ import { AdminTable } from "../../../components/admin/AdminTable";
 import { AdminConfirmModal } from "../generations/AdminConfirmModal";
 import { useLanguage } from "../../../hooks/useLanguage";
 import { formatCurrency } from "../../../lib/format";
+import {
+  getPaymentProviderMeta,
+  listPaymentProviderMeta,
+} from "../../../lib/paymentProviders/registry";
 import type {
   AdminPayment,
   AdminPaymentSummary,
@@ -149,7 +153,10 @@ function DetailModal({
           {field("Credits", String(payment.credits ?? "—"))}
           {field("Amount", formatCurrency(payment.amountMnt))}
           {field("Currency", payment.currency)}
-          {field("Provider", payment.provider)}
+          {(() => {
+            const meta = getPaymentProviderMeta(payment.provider);
+            return field("Provider", `${meta.displayName} (${meta.status})`);
+          })()}
           {field("Provider ref", payment.providerReference ?? "—")}
           {field("Created", formatDate(payment.createdAt))}
           {field("Updated", formatDate(payment.updatedAt))}
@@ -479,6 +486,29 @@ export function AdminPaymentsPage() {
 
       <div className="mt-6">
         <AdminNotice>{p.notice}</AdminNotice>
+      </div>
+
+      {/* Provider readiness */}
+      <div className="mt-4 rounded-[1.5rem] border border-white/10 bg-white/[0.025] p-5">
+        <p className="text-xs font-semibold uppercase text-white/42">{p.providerReadiness}</p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {listPaymentProviderMeta().map((meta) => (
+            <span
+              key={meta.key}
+              className={`rounded-full border px-3 py-1 text-xs font-medium ${
+                meta.status === "manual_only"
+                  ? "border-amber-400/25 bg-amber-400/10 text-amber-200"
+                  : meta.status === "active"
+                    ? "border-emerald-400/25 bg-emerald-400/10 text-emerald-200"
+                    : meta.status === "testing"
+                      ? "border-blue-400/25 bg-blue-400/10 text-blue-200"
+                      : "border-white/10 bg-white/[0.03] text-white/40"
+              }`}
+            >
+              {meta.displayName}: {meta.status.replace("_", " ")}
+            </span>
+          ))}
+        </div>
       </div>
 
       {/* Detail modal */}

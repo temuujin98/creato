@@ -9,8 +9,9 @@ import { useLanguage } from "../hooks/useLanguage";
 import { formatCurrency } from "../lib/format";
 import type { ClientCreditPackage } from "../lib/creditPackages";
 import { listActiveCreditPackages } from "../lib/creditPackages";
-import type { PaymentOrder } from "../lib/payments";
-import { createPaymentOrder } from "../lib/payments";
+import type { PaymentCheckoutResult } from "../lib/payments";
+import { createPaymentCheckout } from "../lib/payments";
+import { getPaymentProviderMeta } from "../lib/paymentProviders/registry";
 
 // Fallback packages shown while loading or when Supabase is unavailable.
 // Values match the seeded packages from migration 0014.
@@ -24,11 +25,11 @@ const FALLBACK_PACKAGES: ClientCreditPackage[] = [
 // ─── Order created modal ──────────────────────────────────────────────────────
 
 function OrderModal({
-  order,
+  result,
   onClose,
   labels,
 }: {
-  order: PaymentOrder;
+  result: PaymentCheckoutResult;
   onClose: () => void;
   labels: {
     title: string;
@@ -38,10 +39,14 @@ function OrderModal({
     amount: string;
     orderId: string;
     status: string;
+    provider: string;
+    checkoutMode: string;
     notice: string;
     viewMyPayments: string;
   };
 }) {
+  const { order, checkout } = result;
+  const providerMeta = getPaymentProviderMeta(order.provider);
   const closeBtnRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => { closeBtnRef.current?.focus(); }, []);
@@ -84,6 +89,8 @@ function OrderModal({
             [labels.credits, String(order.credits)],
             [labels.amount, formatCurrency(order.amountMnt)],
             [labels.status, order.status],
+            [labels.provider, providerMeta.displayName],
+            [labels.checkoutMode, checkout.checkoutMode],
           ].map(([label, value]) => (
             <div key={label} className="flex flex-col gap-0.5">
               <dt className="text-xs text-white/42">{label}</dt>
@@ -129,7 +136,7 @@ export function PricingPage() {
   const [packages, setPackages] = useState<ClientCreditPackage[]>(FALLBACK_PACKAGES);
   const [creatingId, setCreatingId] = useState<string | null>(null);
   const [createError, setCreateError] = useState<string | null>(null);
-  const [createdOrder, setCreatedOrder] = useState<PaymentOrder | null>(null);
+  const [createdResult, setCreatedResult] = useState<PaymentCheckoutResult | null>(null);
 
   useEffect(() => {
     listActiveCreditPackages()
@@ -145,8 +152,8 @@ export function PricingPage() {
     setCreatingId(pkg.id);
     setCreateError(null);
     try {
-      const order = await createPaymentOrder(pkg.id);
-      setCreatedOrder(order);
+      const result = await createPaymentCheckout(pkg.id);
+      setCreatedResult(result);
     } catch (err) {
       setCreateError(err instanceof Error ? err.message : t.pricing.orderFailed);
     } finally {
@@ -226,10 +233,10 @@ export function PricingPage() {
       </main>
       <Footer />
 
-      {createdOrder && (
+      {createdResult && (
         <OrderModal
-          order={createdOrder}
-          onClose={() => setCreatedOrder(null)}
+          result={createdResult}
+          onClose={() => setCreatedResult(null)}
           labels={{
             title: t.pricing.orderCreated,
             close: t.pricing.close,
@@ -238,7 +245,9 @@ export function PricingPage() {
             amount: t.pricing.orderAmount,
             orderId: t.pricing.orderId,
             status: t.pricing.orderStatus,
-            notice: t.pricing.orderNotice,
+            provider: t.providers.paymentProvider,
+            checkoutMode: t.providers.checkoutMode,
+            notice: t.providers.adapterFoundationNotice,
             viewMyPayments: t.pricing.viewMyPayments,
           }}
         />
