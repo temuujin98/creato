@@ -14,3 +14,6 @@ dist
 supabase/.branches
 supabase/.temp
 supabase/.cache
+
+# Test script output — generated images must not be committed
+scripts/test-output/

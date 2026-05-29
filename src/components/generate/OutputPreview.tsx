@@ -3,7 +3,6 @@ import {
   AlertCircle,
   CheckCircle,
   Clock,
-  Download,
   Image,
   LoaderCircle,
 } from "lucide-react";
@@ -11,6 +10,8 @@ import {
   getGenerationOutputPreviews,
   type GenerationOutputPreview,
 } from "../../lib/generationOutputs";
+import { buildDownloadFilename } from "../../lib/download";
+import { DownloadButton } from "../ui/DownloadButton";
 
 type OutputPreviewProps = {
   completedDescription?: string;
@@ -27,6 +28,7 @@ type OutputPreviewProps = {
   previewExpiresNote?: string;
   pendingDescription?: string;
   pendingTitle?: string;
+  presetSlug?: string;
   signedUrlFailedLabel?: string;
   status?: "idle" | "queued" | "processing" | "completed" | "failed";
   title: string;
@@ -46,6 +48,7 @@ export function OutputPreview({
   outputPreviewFailedLabel,
   pendingDescription,
   pendingTitle,
+  presetSlug,
   previewExpiresNote,
   signedUrlFailedLabel,
   status = "idle",
@@ -166,14 +169,16 @@ export function OutputPreview({
                       </p>
                     ) : null}
                   </div>
-                  <a
-                    href={output.url}
-                    download
+                  <DownloadButton
                     className="inline-flex items-center gap-2 rounded-full border border-white/12 px-4 py-2 text-sm font-semibold text-white transition hover:border-white/28 hover:bg-white/8"
-                  >
-                    <Download className="h-4 w-4" aria-hidden="true" />
-                    {downloadLabel}
-                  </a>
+                    filename={buildDownloadFilename(
+                      presetSlug ?? "output",
+                      output.createdAt,
+                      index,
+                    )}
+                    label={downloadLabel ?? ""}
+                    url={output.url}
+                  />
                 </div>
               </article>
             ))}

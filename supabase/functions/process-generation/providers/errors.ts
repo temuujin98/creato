@@ -2,7 +2,11 @@ import type { NormalizedProviderError, ProviderName } from "./types.ts";
 
 export const providerErrorCodes = {
   providerAuthError: "provider_auth_error",
+  providerBillingError: "provider_billing_error",
+  providerInvalidRequest: "provider_invalid_request",
+  providerModelUnavailable: "provider_model_unavailable",
   providerNotConfigured: "provider_not_configured",
+  providerQuotaExceeded: "provider_quota_exceeded",
   providerRateLimit: "provider_rate_limit",
   providerResponseInvalid: "provider_response_invalid",
   providerSafetyBlock: "provider_safety_block",

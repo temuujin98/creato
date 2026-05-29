@@ -48,7 +48,7 @@ export function Footer() {
   ];
   const accountLinks = [
     { label: t.nav.dashboard, to: "/dashboard" },
-    { label: t.nav.wallet, to: "/dashboard" },
+    { label: t.nav.myCreations, to: "/my-images" },
     { label: t.nav.settings, to: "/settings" },
   ];
   const socialLinks = [

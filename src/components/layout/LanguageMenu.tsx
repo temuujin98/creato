@@ -13,7 +13,7 @@ const languageOptions: Array<{
 ];
 
 const triggerClass =
-  "flex h-10 w-10 items-center justify-center rounded-full border border-black/10 bg-white text-black/70 transition hover:bg-black/5 hover:text-black dark:border-white/10 dark:bg-neutral-950 dark:text-white/80 dark:hover:bg-white/10 dark:hover:text-white";
+  "flex h-10 w-10 items-center justify-center rounded-full border border-black/10 bg-white text-black/70 transition hover:bg-black/5 hover:text-black dark:border-white/10 dark:bg-neutral-950 dark:text-white/80 dark:hover:border-primary/40 dark:hover:bg-white/5 dark:hover:text-white";
 
 export function LanguageMenu() {
   const { language, setLanguage, t } = useLanguage();

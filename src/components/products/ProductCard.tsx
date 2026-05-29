@@ -1,8 +1,9 @@
-import { Image, Sparkles } from "lucide-react";
+import { Image } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { Category } from "../../data/categories";
 import type { Product } from "../../data/products";
 import type { Language } from "../../i18n/translations";
+import { CreditIcon } from "../ui/CreditIcon";
 
 type ProductCardProps = {
   category?: Category;
@@ -69,7 +70,7 @@ export function ProductCard({
 
           <div className="mt-5 flex flex-wrap gap-2 text-xs text-white/54">
             <span className="inline-flex items-center gap-1 rounded-full border border-white/10 px-3 py-1.5">
-              <Sparkles className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
+              <CreditIcon />
               {product.creditCost} {creditLabel}
             </span>
             <span className="inline-flex items-center gap-1 rounded-full border border-white/10 px-3 py-1.5">

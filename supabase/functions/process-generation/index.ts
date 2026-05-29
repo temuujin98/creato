@@ -8,6 +8,7 @@ import { storeGeneratedOutputs } from "./storage/outputStorage.ts";
 type GenerationRecord = {
   created_at: string;
   credit_cost: number;
+  error_code: string | null;
   id: string;
   metadata: Record<string, unknown> | null;
   model: string | null;
@@ -185,6 +186,13 @@ async function failGenerationAndRefund(input: {
   responseStatus?: number;
   serviceClient: ReturnType<typeof createClient>;
 }) {
+  console.log("generation_failed", {
+    code: input.code,
+    generationId: input.generation.id,
+    productId: input.generation.product_id,
+    status: input.generation.status,
+  });
+
   await updateGeneration(input.serviceClient, input.generation.id, {
     error_code: input.code,
     error_message: input.message,
@@ -232,6 +240,13 @@ async function disableRealAiAndRefund(input: {
   generation: GenerationRecord;
   serviceClient: ReturnType<typeof createClient>;
 }) {
+  console.log("generation_failed", {
+    code: "real_ai_disabled",
+    generationId: input.generation.id,
+    productId: input.generation.product_id,
+    status: input.generation.status,
+  });
+
   const message = "Real AI generation is disabled for cost safety.";
 
   await updateGeneration(input.serviceClient, input.generation.id, {
@@ -391,7 +406,7 @@ Deno.serve(async (request) => {
   const { data: generation, error: generationError } = await serviceClient
     .from("generations")
     .select(
-      "id,user_id,product_id,status,credit_cost,provider,model,retry_count,metadata,created_at,updated_at",
+      "id,user_id,product_id,status,credit_cost,error_code,provider,model,retry_count,metadata,created_at,updated_at",
     )
     .eq("id", body.generationId)
     .maybeSingle<GenerationRecord>();
@@ -405,6 +420,12 @@ Deno.serve(async (request) => {
     return jsonResponse({ error: "generation_not_found", ok: false }, 404);
   }
 
+  console.log("generation_loaded", {
+    generationId: generation.id,
+    productId: generation.product_id,
+    status: generation.status,
+  });
+
   const ownsGeneration = generation.user_id === authData.user.id;
   const admin = ownsGeneration ? false : await isAdmin(serviceClient, authData.user.id);
 
@@ -412,7 +433,13 @@ Deno.serve(async (request) => {
     return jsonResponse({ error: "forbidden", ok: false }, 403);
   }
 
-  if (generation.status === "completed") {
+  if (generation.status === "completed" || generation.status === "credit_spent") {
+    console.log("generation_state_checked", {
+      generationId: generation.id,
+      productId: generation.product_id,
+      result: "already_completed",
+      status: generation.status,
+    });
     return jsonResponse({
       generationId: generation.id,
       ok: true,
@@ -421,17 +448,33 @@ Deno.serve(async (request) => {
   }
 
   if (!allowedStatuses.has(generation.status)) {
+    console.log("generation_state_checked", {
+      errorCode: generation.error_code,
+      generationId: generation.id,
+      productId: generation.product_id,
+      result: "terminal_state_rejected",
+      status: generation.status,
+    });
     return jsonResponse(
       {
         error: "invalid_generation_state",
+        errorCode: generation.error_code ?? undefined,
         message:
           terminalStatusMessages[generation.status] ??
           "Generation status is not allowed for processing.",
         ok: false,
+        status: generation.status,
       },
       409,
     );
   }
+
+  console.log("generation_state_checked", {
+    generationId: generation.id,
+    productId: generation.product_id,
+    result: "allowed",
+    status: generation.status,
+  });
 
   const { data: product, error: productError } = await serviceClient
     .from("products")
@@ -742,6 +785,14 @@ Deno.serve(async (request) => {
     }
   }
 
+  console.log("gemini_call_started", {
+    generationId: generation.id,
+    model: modelConfig.primary_model,
+    outputCount: modelConfig.output_count,
+    productId: product.id,
+    provider: modelConfig.primary_provider,
+  });
+
   const providerResult = await adapter.generateImage({
     inputImages: providerInputImages,
     metadata: {
@@ -785,6 +836,13 @@ Deno.serve(async (request) => {
     );
   }
 
+  console.log("gemini_call_succeeded", {
+    generationId: generation.id,
+    model: providerResult.model,
+    outputCount: providerResult.outputs.length,
+    provider: providerResult.provider,
+  });
+
   if (dryRun) {
     return jsonResponse({
       generation: {
@@ -817,6 +875,12 @@ Deno.serve(async (request) => {
 
   let outputCount = 0;
 
+  console.log("storage_upload_started", {
+    generationId: generation.id,
+    outputCount: providerResult.outputs.length,
+    provider: providerResult.provider,
+  });
+
   try {
     const storedOutputs = await storeGeneratedOutputs(serviceClient, {
       generationId: generation.id,
@@ -826,6 +890,10 @@ Deno.serve(async (request) => {
       userId: generation.user_id,
     });
     outputCount = storedOutputs.length;
+    console.log("storage_upload_succeeded", {
+      generationId: generation.id,
+      outputCount,
+    });
   } catch {
     return await failGenerationAndRefund({
       code: "output_storage_failed",
@@ -852,6 +920,10 @@ Deno.serve(async (request) => {
 
   try {
     await spendReservedCredits(serviceClient, generation);
+    console.log("credit_spent", {
+      amount: generation.credit_cost,
+      generationId: generation.id,
+    });
   } catch {
     await updateGeneration(serviceClient, generation.id, {
       metadata: {
@@ -873,6 +945,12 @@ Deno.serve(async (request) => {
       500,
     );
   }
+
+  console.log("generation_completed", {
+    generationId: generation.id,
+    outputCount,
+    provider: providerResult.provider,
+  });
 
   return jsonResponse({
     generationId: generation.id,

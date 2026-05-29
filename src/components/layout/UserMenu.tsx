@@ -90,7 +90,7 @@ export function UserMenu() {
       {/* Avatar button */}
       <button
         type="button"
-        className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-neutral-950 text-sm font-semibold text-white/80 transition hover:border-white/20 hover:bg-white/10 hover:text-white"
+        className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border-2 border-primary bg-neutral-950 text-sm font-semibold text-white/80"
         aria-label={t.nav.accountMenu}
         aria-expanded={isOpen}
         onClick={() => setIsOpen((v) => !v)}

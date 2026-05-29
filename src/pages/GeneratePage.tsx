@@ -254,6 +254,7 @@ export function GeneratePage() {
               <OutputPreview
                 title={t.generate.outputPreview}
                 emptyText={t.generate.outputEmpty}
+                presetSlug={product.slug}
                 status={generationStatus}
                 pendingTitle={t.generate.aiBackendPending}
                 pendingDescription={t.generate.workerNotConnected}

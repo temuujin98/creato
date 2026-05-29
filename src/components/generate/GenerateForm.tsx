@@ -332,12 +332,7 @@ export function GenerateForm({
 
         didCallEdgeFunction = true;
         setTimeline((current) => ({ ...current, aiBackendCalled: true }));
-        let processResponse = await processGeneration(result.generationId);
-
-        if (!processResponse.ok) {
-          await new Promise((resolve) => setTimeout(resolve, 900));
-          processResponse = await processGeneration(result.generationId);
-        }
+        const processResponse = await processGeneration(result.generationId);
 
         const terminalStatus = await pollGenerationUntilTerminal(result.generationId);
 

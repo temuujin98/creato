@@ -1,6 +1,7 @@
 import { CreditCard, Image, Package, ShieldCheck, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 import { QuickActionCard } from "../components/dashboard/QuickActionCard";
+import { RecentCreationsSection } from "../components/dashboard/RecentCreationsSection";
 import { StatCard } from "../components/dashboard/StatCard";
 import { Footer } from "../components/layout/Footer";
 import { Navbar } from "../components/layout/Navbar";
@@ -101,15 +102,7 @@ export function DashboardPage() {
             </section>
 
             <section className="rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-6">
-              <h2 className="text-2xl font-semibold">
-                {t.dashboard.recentGeneration}
-              </h2>
-              <p className="mt-8 rounded-[1.25rem] border border-dashed border-white/14 bg-black/30 p-8 text-center text-white/48">
-                {t.dashboard.emptyRecent}
-              </p>
-              <p className="mt-5 text-sm leading-6 text-white/42">
-                {t.dashboard.backendNotice}
-              </p>
+              <RecentCreationsSection />
             </section>
           </div>
         </section>

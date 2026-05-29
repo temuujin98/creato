@@ -8,10 +8,25 @@ import {
   type AuthResult,
 } from "./auth-context";
 
+const authInitTimeoutMs = 8000;
+
 function readableAuthError(message: string | undefined) {
   if (!message) return "Authentication failed. Please try again.";
   if (message.toLowerCase().includes("invalid login credentials")) return "Invalid email or password.";
   return message;
+}
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string) {
+  return new Promise<T>((resolve, reject) => {
+    const timeoutId = window.setTimeout(() => {
+      reject(new Error(message));
+    }, timeoutMs);
+
+    promise
+      .then(resolve)
+      .catch(reject)
+      .finally(() => window.clearTimeout(timeoutId));
+  });
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -27,7 +42,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setProfileError(supabaseConfigError);
       return;
     }
-    const currentUser = (await supabase.auth.getUser()).data.user;
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    if (userError) {
+      setProfile(null);
+      setProfileError(readableAuthError(userError.message));
+      return;
+    }
+    const currentUser = userData.user;
     if (!currentUser) {
       setProfile(null);
       setProfileError(null);
@@ -50,6 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let mounted = true;
     if (!supabase) { setLoading(false); return undefined; }
+    const client = supabase;
 
     async function ensureProfileRow(currentUser: User) {
       if (!supabase) return;
@@ -68,27 +90,72 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       );
     }
 
-    supabase.auth.getSession().then(async ({ data }) => {
-      if (!mounted) return;
-      setSession(data.session);
-      setUser(data.session?.user ?? null);
-      if (data.session?.user) {
-        await ensureProfileRow(data.session.user);
+    async function syncProfile(currentUser: User) {
+      try {
+        await ensureProfileRow(currentUser);
         await refreshProfile();
+      } catch (error) {
+        if (!mounted) return;
+        setProfile(null);
+        setProfileError(
+          readableAuthError(
+            error instanceof Error ? error.message : "Profile could not be loaded.",
+          ),
+        );
       }
-      if (mounted) setLoading(false);
-    });
+    }
+
+    async function initializeAuth() {
+      try {
+        const { data, error } = await withTimeout(
+          client.auth.getSession(),
+          authInitTimeoutMs,
+          "Authentication took too long to respond.",
+        );
+
+        if (!mounted) return;
+
+        if (error) {
+          setSession(null);
+          setUser(null);
+          setProfile(null);
+          setProfileError(readableAuthError(error.message));
+          return;
+        }
+
+        setSession(data.session);
+        setUser(data.session?.user ?? null);
+
+        if (data.session?.user) {
+          void syncProfile(data.session.user);
+        } else {
+          setProfile(null);
+          setProfileError(null);
+        }
+      } catch (error) {
+        if (!mounted) return;
+        setSession(null);
+        setUser(null);
+        setProfile(null);
+        setProfileError(
+          readableAuthError(
+            error instanceof Error ? error.message : "Authentication could not be resolved.",
+          ),
+        );
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    }
+
+    void initializeAuth();
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, nextSession) => {
+    } = client.auth.onAuthStateChange((_event, nextSession) => {
       setSession(nextSession);
       setUser(nextSession?.user ?? null);
       if (nextSession?.user) {
-        if (_event === "SIGNED_IN") {
-          await ensureProfileRow(nextSession.user);
-        }
-        refreshProfile();
+        void syncProfile(nextSession.user);
       } else {
         setProfile(null);
         setProfileError(null);
