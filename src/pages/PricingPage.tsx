@@ -1,7 +1,7 @@
 import { CheckCircle2, Loader2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Footer } from "../components/layout/Footer";
 import { Navbar } from "../components/layout/Navbar";
 import { useAuth } from "../hooks/useAuth";
@@ -39,6 +39,7 @@ function OrderModal({
     orderId: string;
     status: string;
     notice: string;
+    viewMyPayments: string;
   };
 }) {
   const closeBtnRef = useRef<HTMLButtonElement | null>(null);
@@ -99,10 +100,19 @@ function OrderModal({
           {labels.notice}
         </p>
 
-        <button type="button" onClick={onClose}
-          className="mt-5 w-full rounded-xl border border-white/10 py-2.5 text-sm text-white/70 transition hover:border-white/20 hover:text-white">
-          {labels.close}
-        </button>
+        <div className="mt-5 flex flex-col gap-2">
+          <Link
+            to="/billing"
+            onClick={onClose}
+            className="block w-full rounded-xl bg-white py-2.5 text-center text-sm font-semibold text-black transition hover:bg-white/90"
+          >
+            {labels.viewMyPayments}
+          </Link>
+          <button type="button" onClick={onClose}
+            className="w-full rounded-xl border border-white/10 py-2.5 text-sm text-white/70 transition hover:border-white/20 hover:text-white">
+            {labels.close}
+          </button>
+        </div>
       </div>
     </div>,
     document.body,
@@ -229,6 +239,7 @@ export function PricingPage() {
             orderId: t.pricing.orderId,
             status: t.pricing.orderStatus,
             notice: t.pricing.orderNotice,
+            viewMyPayments: t.pricing.viewMyPayments,
           }}
         />
       )}

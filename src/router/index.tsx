@@ -17,6 +17,7 @@ import { AdminDashboardPage } from "../pages/admin/dashboard";
 import { AdminGenerationsPage } from "../pages/admin/generations";
 import { AdminAnalyticsPage } from "../pages/admin/analytics/AdminAnalyticsPage";
 import { AdminPaymentsPage } from "../pages/admin/payments/AdminPaymentsPage";
+import { BillingPage } from "../pages/BillingPage";
 import { AdminModelSettingsPage } from "../pages/admin/model-settings";
 import {
   AdminPresetEditorPage,
@@ -54,6 +55,14 @@ export function AppRouter() {
         element={
           <ProtectedRoute>
             <SettingsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/billing"
+        element={
+          <ProtectedRoute>
+            <BillingPage />
           </ProtectedRoute>
         }
       />

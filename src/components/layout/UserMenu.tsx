@@ -48,8 +48,8 @@ export function UserMenu() {
     },
     {
       icon: <Wallet className="h-4 w-4" aria-hidden="true" />,
-      label: t.nav.wallet,
-      to: "/dashboard",
+      label: t.nav.billing,
+      to: "/billing",
     },
   ];
 
@@ -90,7 +90,7 @@ export function UserMenu() {
       {/* Avatar button */}
       <button
         type="button"
-        className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border-2 border-primary bg-neutral-950 text-sm font-semibold text-white/80"
+        className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border-2 border-white/10 bg-neutral-950 text-sm font-semibold text-white/80"
         aria-label={t.nav.accountMenu}
         aria-expanded={isOpen}
         onClick={() => setIsOpen((v) => !v)}

@@ -57,10 +57,22 @@ Both checks run inside the same transaction that modifies the wallet, ensuring a
 - The existing analytics `revenueEstimateMnt` (credit-based estimate) remains the MVP indicator until Phase 30+ adds payment-based reconciliation.
 - `totalPaidAmountMnt` in admin payments summary provides the direct payment revenue signal.
 
+## Phase 31 additions
+
+### User billing UX (`/billing`)
+
+- Phase 31 adds `src/pages/BillingPage.tsx` at `/billing` (protected, authenticated users only).
+- Users view only their own payment orders via existing RLS (`user_id = auth.uid()`).
+- `listUserPayments()` selects: `id,credits,amount_mnt,currency,package_code,package_name,provider,status,expires_at,paid_at,credited_at,created_at` — no `provider_payload`.
+- Users cannot mark payments as paid or mutate their wallet balance.
+- A new `cancel_own_payment_order(uuid)` RPC allows users to cancel their own pending, uncredited orders without admin involvement. No wallet mutation occurs.
+- Paid and refunded orders cannot be canceled by users.
+- The `UserMenu` "Wallet" link now points to `/billing`.
+- The `PricingPage` order-created modal links to `/billing` after order creation.
+
 ## Future Phases
 
-- Phase 31+: Integrate QPay (or another MN payment provider). Map provider webhook → update `provider_reference`, `provider_payload`, trigger `admin_mark_payment_paid` or equivalent server-side settlement.
+- Phase 32+: Integrate QPay (or another MN payment provider). Map provider webhook → update `provider_reference`, `provider_payload`, trigger server-side settlement.
 - Add webhook endpoint (Edge Function) to receive provider payment confirmations and automatically settle payments without admin intervention.
-- Add user-facing payment history page (`/billing`) showing own payment orders.
 - Add payment expiry job that marks `expires_at < now()` and `status = 'pending'` orders as `expired`.
 - Add provider invoice reconciliation for accounting-grade revenue reporting.
