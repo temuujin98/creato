@@ -82,8 +82,40 @@ Migration 0016 automatically seeds a `product_allowed_models` row for each activ
 linking it to the default active image model from `ai_model_registry` (gemini-image).
 This ensures the generate flow works for existing products without manual admin setup.
 
-## Phase 28 plan
+## Phase 28 implementation
 
-- `process-generation` Edge Function validates `model_config_id` from the generation record
-- Selected provider/model_key from `ai_model_registry` replaces hardcoded routing
-- Video modality gated (returns error if product does not support video)
+Phase 28 completed the server-side security enforcement.
+
+### What the Edge Function now does
+
+1. **Reads `generation.model_config_id`** from the generation record (set by the client in Phase 27).
+2. **If set** → calls `validateRegistryModel(serviceClient, productId, modelConfigId, productCreditCost)`:
+   - Checks `product_allowed_models.is_active = true`
+   - Checks `ai_model_registry.is_active = true`
+   - Checks `ai_model_registry.status IN ('active', 'testing')`
+   - Checks `ai_model_registry.modality IN ('image', 'multimodal')`
+   - Checks provider is implemented (`gemini` or `openai`)
+   - Returns typed error on any failure → `failGenerationAndRefund` before any provider call
+3. **If not set** → calls `resolveDefaultRegistryModel` to get the product's default allowed model.
+   - If found → uses it
+   - If not found → falls back to legacy `model_configs` (backward-compatible path for pre-Phase 27 products)
+4. **Server-side credit cost enforcement**: computes `effectiveCreditCost` from `product_allowed_models.credit_cost_override ?? product.credit_cost`. Compares to `generation.credit_cost`. Fails if mismatch.
+5. **Provider routing**: uses `effectiveProvider` (from registry) instead of trusting client.
+6. **Records**: updates `selected_provider` and `selected_model_key` on completion.
+
+### Client is NOT trusted
+
+The client model selector (Phase 27) is UX-only. The server ignores client-supplied provider/model strings. All routing decisions come from the validated registry record.
+
+### Error codes returned on validation failure
+
+| Code | Meaning |
+|---|---|
+| `model_not_allowed` | Model not in product_allowed_models or relation.is_active = false |
+| `model_inactive` | ai_model_registry.is_active = false or status = deprecated |
+| `model_not_configured` | No allowed model exists for this product |
+| `unsupported_model_modality` | Model is video/text — not image-compatible |
+| `provider_not_configured` | Provider not implemented in Edge Function |
+| `credit_cost_mismatch` | Client reserved a different amount than server-derived cost |
+
+All errors trigger `failGenerationAndRefund` — reserved credits are returned before the function exits.

@@ -1,4 +1,9 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  resolveDefaultRegistryModel,
+  validateRegistryModel,
+} from "./model-validation.ts";
+import type { RegistryModelResolution } from "./model-validation.ts";
 import { mapProviderError } from "./providers/errors.ts";
 import { getProviderAdapter } from "./providers/providerFactory.ts";
 import type { NormalizedProviderError, ProviderName } from "./providers/types.ts";
@@ -12,9 +17,13 @@ type GenerationRecord = {
   id: string;
   metadata: Record<string, unknown> | null;
   model: string | null;
+  // Phase 28: registry-based model selection (from ai_model_registry)
+  model_config_id: string | null;
   product_id: string;
   provider: string | null;
   retry_count: number;
+  selected_model_key: string | null;
+  selected_provider: string | null;
   status: string;
   updated_at: string;
   user_id: string;
@@ -406,7 +415,7 @@ Deno.serve(async (request) => {
   const { data: generation, error: generationError } = await serviceClient
     .from("generations")
     .select(
-      "id,user_id,product_id,status,credit_cost,error_code,provider,model,retry_count,metadata,created_at,updated_at",
+      "id,user_id,product_id,status,credit_cost,error_code,provider,model,retry_count,metadata,created_at,updated_at,model_config_id,selected_provider,selected_model_key",
     )
     .eq("id", body.generationId)
     .maybeSingle<GenerationRecord>();
@@ -611,6 +620,73 @@ Deno.serve(async (request) => {
     });
   }
 
+  // ─── Phase 28: Registry-based model resolution ──────────────────────────────
+  //
+  // If generation.model_config_id is set (Phase 27+), validate it strictly.
+  // If null, attempt to resolve the product's default allowed model.
+  // If no registry model is found, fall through to legacy model_configs path.
+  //
+  // The client is NOT trusted. This is the authoritative server-side gate.
+
+  let registryResolution: RegistryModelResolution | null = null;
+
+  if (generation.model_config_id) {
+    // Explicit model selection by client → strict validation required
+    const result = await validateRegistryModel(
+      serviceClient,
+      generation.product_id,
+      generation.model_config_id,
+      product.credit_cost,
+    );
+
+    if (!result.ok) {
+      console.log("registry_model_validation_failed", {
+        errorCode: result.errorCode,
+        generationId: generation.id,
+        modelConfigId: generation.model_config_id,
+        productId: generation.product_id,
+      });
+      return await failGenerationAndRefund({
+        code: result.errorCode,
+        generation,
+        message: result.safeMessage,
+        metadata: { modelConfigId: generation.model_config_id },
+        responseStatus: 409,
+        serviceClient,
+      });
+    }
+
+    registryResolution = result;
+    console.log("registry_model_validated", {
+      effectiveProvider: result.effectiveProvider,
+      generationId: generation.id,
+      modelKey: result.effectiveModelKey,
+    });
+  } else {
+    // No explicit model → try product default from product_allowed_models
+    const defaultResult = await resolveDefaultRegistryModel(
+      serviceClient,
+      generation.product_id,
+      product.credit_cost,
+    );
+
+    if (defaultResult) {
+      registryResolution = defaultResult;
+      console.log("registry_model_resolved_default", {
+        effectiveProvider: defaultResult.effectiveProvider,
+        generationId: generation.id,
+        modelKey: defaultResult.effectiveModelKey,
+      });
+    } else {
+      // No registry model → will fall through to legacy model_configs path
+      console.log("registry_model_not_found_using_legacy", {
+        generationId: generation.id,
+        productId: generation.product_id,
+      });
+    }
+  }
+  // ────────────────────────────────────────────────────────────────────────────
+
   const modelConfigSelect =
     "id,primary_provider,primary_model,fallback_provider,fallback_model,output_size,output_count,retry_limit,cleanup_enabled,estimated_cost_mnt,public_option_id,display_name,is_default,credit_cost_override";
 
@@ -681,19 +757,44 @@ Deno.serve(async (request) => {
     }
   }
 
-  if (!modelConfig) {
+  // If neither registry nor legacy config is available, fail
+  if (!registryResolution && !modelConfig) {
     return jsonResponse(
       {
-        error: "active_model_config_missing",
-        message: "Active model config is missing.",
+        error: "model_not_configured",
+        message: "No AI model is configured for this product.",
         ok: false,
       },
       409,
     );
   }
 
-  const expectedCreditCost =
-    modelConfig.credit_cost_override ?? product.credit_cost;
+  // Effective routing: registry takes priority; legacy model_configs is fallback
+  const usingRegistryPath = registryResolution !== null;
+
+  const effectiveProvider: ProviderName = usingRegistryPath
+    ? registryResolution!.effectiveProvider
+    : modelConfig!.primary_provider;
+
+  const effectiveModelKey: string = usingRegistryPath
+    ? registryResolution!.effectiveModelKey
+    : modelConfig!.primary_model;
+
+  // Output settings: model_configs has explicit settings; registry provides defaults
+  const effectiveOutputCount: number =
+    modelConfig?.output_count ??
+    registryResolution?.registryModel.default_output_count ??
+    1;
+
+  const effectiveOutputSize: string | null =
+    modelConfig?.output_size ??
+    registryResolution?.registryModel.default_output_size ??
+    null;
+
+  // Server-side credit cost enforcement (do not trust client)
+  const expectedCreditCost: number = usingRegistryPath
+    ? registryResolution!.effectiveCreditCost
+    : (modelConfig!.credit_cost_override ?? product.credit_cost);
 
   if (generation.credit_cost !== expectedCreditCost) {
     return await failGenerationAndRefund({
@@ -703,6 +804,7 @@ Deno.serve(async (request) => {
       metadata: {
         expectedCreditCost,
         selectedModelOptionId,
+        usingRegistryPath,
       },
       responseStatus: 409,
       serviceClient,
@@ -749,15 +851,16 @@ Deno.serve(async (request) => {
   let adapter;
 
   try {
-    adapter = getProviderAdapter(modelConfig.primary_provider, { dryRun });
+    adapter = getProviderAdapter(effectiveProvider, { dryRun });
   } catch (error) {
-    const mappedError = mapProviderError(error, modelConfig.primary_provider);
+    const mappedError = mapProviderError(error, effectiveProvider);
     return await failGenerationAndRefund({
       code: mappedError.code,
       generation,
       message: mappedError.message,
       metadata: {
-        provider: modelConfig.primary_provider,
+        provider: effectiveProvider,
+        usingRegistryPath,
       },
       serviceClient,
     });
@@ -785,32 +888,35 @@ Deno.serve(async (request) => {
     }
   }
 
-  console.log("gemini_call_started", {
+  console.log("provider_call_started", {
+    effectiveModel: effectiveModelKey,
+    effectiveProvider,
     generationId: generation.id,
-    model: modelConfig.primary_model,
-    outputCount: modelConfig.output_count,
+    outputCount: effectiveOutputCount,
     productId: product.id,
-    provider: modelConfig.primary_provider,
+    usingRegistryPath,
   });
 
   const providerResult = await adapter.generateImage({
     inputImages: providerInputImages,
     metadata: {
       generationId: generation.id,
+      modelConfigId: generation.model_config_id ?? undefined,
       productId: product.id,
+      usingRegistryPath,
     },
-    model: modelConfig.primary_model,
+    model: effectiveModelKey,
     negativePrompt: promptDraft.negativeText ?? undefined,
-    outputCount: modelConfig.output_count,
-    outputSize: modelConfig.output_size,
+    outputCount: effectiveOutputCount,
+    outputSize: effectiveOutputSize,
     prompt: promptDraft.text,
-    provider: modelConfig.primary_provider,
+    provider: effectiveProvider,
   });
 
   if (!providerResult.ok) {
     const mappedError: NormalizedProviderError = mapProviderError(
       providerResult,
-      modelConfig.primary_provider,
+      effectiveProvider,
     );
 
     if (!dryRun) {
@@ -836,11 +942,12 @@ Deno.serve(async (request) => {
     );
   }
 
-  console.log("gemini_call_succeeded", {
+  console.log("provider_call_succeeded", {
     generationId: generation.id,
     model: providerResult.model,
     outputCount: providerResult.outputs.length,
     provider: providerResult.provider,
+    usingRegistryPath,
   });
 
   if (dryRun) {
@@ -866,8 +973,11 @@ Deno.serve(async (request) => {
       },
       provider: {
         dryRun: true,
-        outputCountRequested: modelConfig.output_count,
+        effectiveModel: effectiveModelKey,
+        effectiveProvider,
+        outputCountRequested: effectiveOutputCount,
         ready: true,
+        usingRegistryPath,
       },
       status: "provider_adapter_scaffold_ready",
     });
@@ -915,6 +1025,9 @@ Deno.serve(async (request) => {
     },
     model: providerResult.model,
     provider: providerResult.provider,
+    // Phase 28: record the actual validated provider/model used
+    selected_model_key: effectiveModelKey,
+    selected_provider: effectiveProvider,
     status: "completed",
   });
 

@@ -49,7 +49,12 @@ type GenerateFormLabels = {
   maximumImageRequirement: string;
   minimumImageRequirement: string;
   modelBackendMappingLater: string;
+  modelInactive: string;
+  modelNotAllowed: string;
+  modelNotConfigured: string;
   modelOption: string;
+  providerNotConfigured: string;
+  unsupportedModelModality: string;
   optionsTitle: string;
   productDbIdMissing: string;
   readyToCreate: string;
@@ -169,15 +174,28 @@ export function GenerateForm({
     if (errorCode === "provider_rate_limit") {
       return `${labels.providerRateLimit} ${labels.providerFailureRefunded}`;
     }
-
     if (errorCode === "real_ai_disabled") {
       return labels.realAiDisabled;
     }
-
+    // Phase 28: registry model validation errors
+    if (errorCode === "model_not_allowed" || errorCode === "model_option_not_configured") {
+      return `${labels.modelNotAllowed} ${labels.providerFailureRefunded}`;
+    }
+    if (errorCode === "model_inactive") {
+      return `${labels.modelInactive} ${labels.providerFailureRefunded}`;
+    }
+    if (errorCode === "model_not_configured") {
+      return `${labels.modelNotConfigured} ${labels.providerFailureRefunded}`;
+    }
+    if (errorCode === "unsupported_model_modality") {
+      return `${labels.unsupportedModelModality} ${labels.providerFailureRefunded}`;
+    }
+    if (errorCode === "provider_not_configured") {
+      return `${labels.providerNotConfigured} ${labels.providerFailureRefunded}`;
+    }
     if (errorMessage) {
       return `${errorMessage} ${labels.providerFailureRefunded}`;
     }
-
     return labels.processGenerationFailed;
   }
 
