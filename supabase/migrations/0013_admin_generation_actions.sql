@@ -13,6 +13,7 @@ declare
   v_status         text;
   v_credit_cost    integer;
   v_retry_count    integer;
+  v_wallet_id      uuid;
   v_reserved       integer;
   v_from_reserved  boolean;
   v_txn_id         uuid;
@@ -56,10 +57,14 @@ begin
   end if;
 
   -- 7. Lock wallet
-  select reserved_balance into v_reserved
+  select id, reserved_balance into v_wallet_id, v_reserved
     from wallets
    where user_id = v_user_id
    for update;
+
+  if not found then
+    raise exception 'wallet not found';
+  end if;
 
   -- 8. Determine path and update wallet
   if v_status = 'credit_spent' or v_reserved < v_credit_cost then
@@ -75,8 +80,9 @@ begin
      where user_id = v_user_id;
   end if;
 
-  -- 9. Insert wallet transaction
+  -- 9. Insert wallet transaction (wallet_id is NOT NULL — must be included)
   insert into wallet_transactions (
+    wallet_id,
     user_id,
     type,
     status,
@@ -84,6 +90,7 @@ begin
     generation_id,
     created_by
   ) values (
+    v_wallet_id,
     v_user_id,
     case when v_from_reserved then 'refund' else 'admin_adjustment' end,
     'completed',
