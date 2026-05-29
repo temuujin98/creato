@@ -1,11 +1,33 @@
+import { useEffect, useState } from "react";
 import { Footer } from "../components/layout/Footer";
 import { Navbar } from "../components/layout/Navbar";
-import { pricingPackages } from "../data/pricing";
+import type { ClientCreditPackage } from "../lib/creditPackages";
+import { listActiveCreditPackages } from "../lib/creditPackages";
 import { useLanguage } from "../hooks/useLanguage";
 import { formatCurrency } from "../lib/format";
 
+// Fallback packages shown while loading or when Supabase is unavailable.
+// Values match the seeded packages from migration 0014.
+const FALLBACK_PACKAGES: ClientCreditPackage[] = [
+  { id: "starter",  code: "starter",  name: "Starter",  description: null, credits: 10,  priceMnt: 9900,   badgeText: null,                  isFeatured: false, sortOrder: 10 },
+  { id: "creator",  code: "creator",  name: "Creator",  description: null, credits: 25,  priceMnt: 22900,  badgeText: "Хамгийн тохиромжтой", isFeatured: true,  sortOrder: 20 },
+  { id: "business", code: "business", name: "Business", description: null, credits: 60,  priceMnt: 49900,  badgeText: "Бизнес хэрэглээнд",   isFeatured: false, sortOrder: 30 },
+  { id: "pro",      code: "pro",      name: "Pro",       description: null, credits: 150, priceMnt: 119000, badgeText: "Их хэрэглээнд",       isFeatured: false, sortOrder: 40 },
+];
+
 export function PricingPage() {
   const { t } = useLanguage();
+  const [packages, setPackages] = useState<ClientCreditPackage[]>(FALLBACK_PACKAGES);
+
+  useEffect(() => {
+    listActiveCreditPackages()
+      .then((data) => {
+        if (data.length > 0) setPackages(data);
+      })
+      .catch(() => {
+        // Keep fallback packages on fetch error
+      });
+  }, []);
 
   return (
     <div className="min-h-screen bg-ink">
@@ -25,16 +47,23 @@ export function PricingPage() {
           </div>
 
           <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {pricingPackages.map((item) => (
+            {packages.map((item) => (
               <article
-                key={item.id}
+                key={item.code}
                 className={`rounded-[1.75rem] border p-6 ${
-                  item.highlighted
+                  item.isFeatured
                     ? "border-white/26 bg-white/[0.09] shadow-glow"
                     : "border-white/10 bg-white/[0.035]"
                 }`}
               >
-                <p className="text-lg font-semibold text-white">{item.name}</p>
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-lg font-semibold text-white">{item.name}</p>
+                  {item.badgeText && (
+                    <span className="shrink-0 rounded-full border border-amber-400/25 bg-amber-400/[0.12] px-2 py-0.5 text-[10px] font-semibold text-amber-200/90">
+                      {item.badgeText}
+                    </span>
+                  )}
+                </div>
                 <p className="mt-8 text-5xl font-semibold text-white">
                   {item.credits}
                 </p>
@@ -42,12 +71,11 @@ export function PricingPage() {
                   {t.pricing.credits}
                 </p>
                 <p className="mt-8 text-2xl font-semibold text-white">
-                  {formatCurrency(item.price)}
+                  {formatCurrency(item.priceMnt)}
                 </p>
               </article>
             ))}
           </div>
-
         </section>
       </main>
       <Footer />
