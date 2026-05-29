@@ -7,6 +7,7 @@ import { StatusBadge } from "../../../components/admin/StatusBadge";
 import { EdgeFunctionReadinessPanel } from "../../../components/admin/product-editor/EdgeFunctionReadinessPanel";
 import { ModelRoutingPanel } from "../../../components/admin/product-editor/ModelRoutingPanel";
 import { OptionMappingPanel } from "../../../components/admin/product-editor/OptionMappingPanel";
+import { ProductAllowedModelsSection } from "../../../components/admin/product-editor/ProductAllowedModelsSection";
 import { PromptVersionPanel } from "../../../components/admin/product-editor/PromptVersionPanel";
 import { categories } from "../../../data/categories";
 import { products, type Product } from "../../../data/products";
@@ -60,6 +61,7 @@ const editorTabs = [
   "options",
   "prompt",
   "model",
+  "allowed_models",
   "readiness",
 ] as const;
 
@@ -219,6 +221,10 @@ export function AdminPresetEditorPage() {
         ) : null}
 
         {activeTab === "model" ? <ModelRoutingPanel productDbId={product?.dbProductId} /> : null}
+
+        {activeTab === "allowed_models" ? (
+          <ProductAllowedModelsSection productDbId={product?.dbProductId} />
+        ) : null}
 
         {activeTab === "readiness" ? (
           <EdgeFunctionReadinessPanel product={product} productDbId={product?.dbProductId} />

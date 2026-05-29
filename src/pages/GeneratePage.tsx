@@ -10,6 +10,8 @@ import { categories } from "../data/categories";
 import { getProductBySlug } from "../data/products";
 import { useAuth } from "../hooks/useAuth";
 import { useLanguage } from "../hooks/useLanguage";
+import type { PublicAllowedModel } from "../lib/productAllowedModels";
+import { listPublicProductAllowedModels } from "../lib/productAllowedModels";
 import { getOrCreateWallet, type Wallet } from "../lib/wallet";
 
 export function GeneratePage() {
@@ -24,6 +26,9 @@ export function GeneratePage() {
   const [selectedModelOptionId, setSelectedModelOptionId] = useState<
     string | null
   >(null);
+  // Phase 27: DB-backed allowed models (loaded from product_allowed_models table)
+  const [allowedDbModels, setAllowedDbModels] = useState<PublicAllowedModel[]>([]);
+  const [selectedModelConfigId, setSelectedModelConfigId] = useState<string | null>(null);
   const { productSlug } = useParams();
   const { language, t } = useLanguage();
   const product = productSlug ? getProductBySlug(productSlug) : undefined;
@@ -40,12 +45,35 @@ export function GeneratePage() {
   const selectedModelOption =
     product?.modelOptions?.find((option) => option.id === selectedModelOptionId) ??
     product?.modelOptions?.find((option) => option.id === defaultModelOptionId);
-  const selectedCreditCost =
-    selectedModelOption?.creditCost ?? product?.creditCost ?? 0;
+
+  // Effective credit cost: DB model override > DB model null (product default) > static model option > product default
+  const selectedCreditCost = useMemo(() => {
+    if (allowedDbModels.length > 0 && selectedModelConfigId) {
+      const dbModel = allowedDbModels.find((m) => m.modelConfigId === selectedModelConfigId);
+      // effectiveCreditCost is null means use product.creditCost
+      return dbModel?.effectiveCreditCost ?? product?.creditCost ?? 0;
+    }
+    return selectedModelOption?.creditCost ?? product?.creditCost ?? 0;
+  }, [allowedDbModels, selectedModelConfigId, selectedModelOption, product?.creditCost]);
 
   useEffect(() => {
     setSelectedModelOptionId(defaultModelOptionId);
   }, [defaultModelOptionId]);
+
+  // Phase 27: load DB allowed models when product has a dbProductId
+  useEffect(() => {
+    if (!product?.dbProductId) return;
+    listPublicProductAllowedModels(product.dbProductId)
+      .then((models) => {
+        if (!models.length) return;
+        setAllowedDbModels(models);
+        const defaultModel = models.find((m) => m.isDefault) ?? models[0];
+        setSelectedModelConfigId(defaultModel?.modelConfigId ?? null);
+      })
+      .catch(() => {
+        // On error, keep using static product.modelOptions (existing behavior)
+      });
+  }, [product?.dbProductId]);
 
   useEffect(() => {
     let isMounted = true;
@@ -136,9 +164,12 @@ export function GeneratePage() {
 
               <div className="mt-10 grid gap-5">
                 <GenerateForm
+                  allowedDbModels={allowedDbModels}
                   language={language}
+                  noAllowedModelsLabel={t.generate.noAllowedModels}
                   product={product}
                   selectedCreditCost={selectedCreditCost}
+                  selectedModelConfigId={selectedModelConfigId}
                   selectedModelOptionId={selectedModelOption?.id ?? null}
                   userId={user?.id}
                   labels={{
@@ -210,6 +241,7 @@ export function GeneratePage() {
                   walletError={walletError}
                   walletLoading={walletLoading}
                   onGenerationIdChange={setGenerationId}
+                  onModelConfigChange={setSelectedModelConfigId}
                   onModelOptionChange={setSelectedModelOptionId}
                   onWalletChange={setWallet}
                   onStatusChange={setGenerationStatus}

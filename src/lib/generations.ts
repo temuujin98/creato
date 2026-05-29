@@ -4,8 +4,14 @@ export type GenerationOptionValue = string | number | boolean | string[];
 
 export type CreateGenerationRecordInput = {
   creditCost: number;
+  /** Optional: ID of the selected ai_model_registry row (Phase 27+). */
+  modelConfigId?: string | null;
   optionValues: Record<string, GenerationOptionValue>;
   productId: string;
+  /** Optional: provider from the selected model, recorded for monitoring. */
+  selectedProvider?: string | null;
+  /** Optional: model_key from the selected model, recorded for monitoring. */
+  selectedModelKey?: string | null;
   uploadedFiles: Array<{
     fileName?: string;
     mimeType?: string;
@@ -51,8 +57,11 @@ type GenerationInputInsertRow = {
 
 export async function createGenerationRecord({
   creditCost,
+  modelConfigId,
   optionValues,
   productId,
+  selectedModelKey,
+  selectedProvider,
   uploadedFiles,
   userId,
 }: CreateGenerationRecordInput) {
@@ -63,7 +72,11 @@ export async function createGenerationRecord({
   const { data: generation, error: generationError } = await supabase
     .from("generations")
     .insert({
-      credit_cost: creditCost,
+      credit_cost:         creditCost,
+      // Phase 27: record selected model from ai_model_registry (nullable)
+      model_config_id:     modelConfigId   ?? null,
+      selected_provider:   selectedProvider ?? null,
+      selected_model_key:  selectedModelKey ?? null,
       metadata: {
         no_ai_generation: true,
         source: "frontend_prepare_only",

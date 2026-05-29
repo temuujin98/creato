@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AlertCircle, CheckCircle, Clock, LoaderCircle } from "lucide-react";
+import { AlertCircle, CheckCircle, Clock, LoaderCircle, Star } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { Product } from "../../data/products";
 import type { Language } from "../../i18n/translations";
@@ -10,6 +10,8 @@ import {
   markGenerationQueued,
   type GenerationStatus,
 } from "../../lib/generations";
+import type { PublicAllowedModel } from "../../lib/productAllowedModels";
+import { validateProductModelSelection } from "../../lib/productAllowedModels";
 import { processGeneration } from "../../lib/processGeneration";
 import {
   refundReservedCredits,
@@ -89,11 +91,18 @@ type GenerateFormLabels = {
 };
 
 type GenerateFormProps = {
+  /** Phase 27: DB-backed allowed models from product_allowed_models. If non-empty, used instead of product.modelOptions. */
+  allowedDbModels?: PublicAllowedModel[];
   labels: GenerateFormLabels;
   language: Language;
+  /** Phase 27: label shown when no DB allowed models are configured. */
+  noAllowedModelsLabel?: string;
   product: Product;
   selectedCreditCost: number;
+  /** Phase 27: currently selected DB model config id (from ai_model_registry). */
+  selectedModelConfigId?: string | null;
   selectedModelOptionId: string | null;
+  onModelConfigChange?: (modelConfigId: string) => void;
   onModelOptionChange?: (modelOptionId: string) => void;
   onGenerationIdChange?: (generationId: string | null) => void;
   onWalletChange?: (wallet: Wallet) => void;
@@ -107,13 +116,16 @@ type GenerateFormProps = {
 };
 
 export function GenerateForm({
+  allowedDbModels = [],
   labels,
   language,
+  onModelConfigChange,
   onWalletChange,
   onGenerationIdChange,
   onStatusChange,
   product,
   selectedCreditCost,
+  selectedModelConfigId,
   selectedModelOptionId,
   onModelOptionChange,
   userId,
@@ -121,6 +133,8 @@ export function GenerateForm({
   walletError,
   walletLoading,
 }: GenerateFormProps) {
+  // Phase 27: use DB models when available; fall back to static product.modelOptions
+  const useDbModels = allowedDbModels.length > 0;
   const initialValues = useMemo(() => {
     return Object.fromEntries(
       (product.optionSchema ?? []).map((field) => [
@@ -300,12 +314,33 @@ export function GenerateForm({
       onWalletChange?.(reservedWallet);
       setTimeline((current) => ({ ...current, creditReserved: true }));
 
+      // Phase 27: validate selected DB model if applicable (client-side guard)
+      if (useDbModels && selectedModelConfigId && product.dbProductId) {
+        const { valid, reason } = await validateProductModelSelection(
+          product.dbProductId,
+          selectedModelConfigId,
+        );
+        if (!valid) {
+          throw new Error(reason ?? labels.modelBackendMappingLater);
+        }
+      }
+
+      const selectedDbModel = useDbModels
+        ? allowedDbModels.find((m) => m.modelConfigId === selectedModelConfigId)
+        : null;
+
       const result = await createGenerationRecord({
+        // Phase 27: record selected model from ai_model_registry when DB models are used
+        modelConfigId:      useDbModels ? selectedModelConfigId : null,
+        selectedProvider:   selectedDbModel?.provider ?? null,
+        selectedModelKey:   selectedDbModel?.modelKey ?? null,
         // TODO: Backend validates model_option against model_configs.public_option_id and trusted credit cost.
         creditCost: selectedCreditCost,
-        optionValues: selectedModelOptionId
-          ? { ...values, model_option: selectedModelOptionId }
-          : values,
+        optionValues: useDbModels && selectedModelConfigId
+          ? { ...values, model_config_id: selectedModelConfigId }
+          : selectedModelOptionId
+            ? { ...values, model_option: selectedModelOptionId }
+            : values,
         productId: product.dbProductId,
         uploadedFiles: uploadedReadyFiles.map((item) => ({
           fileName: item.file.name,
@@ -437,7 +472,60 @@ export function GenerateForm({
         </p>
       ) : null}
 
-      {product.modelOptions && product.modelOptions.length > 0 ? (
+      {/* Phase 27: DB-backed model selector (shown when product has allowed models configured) */}
+      {useDbModels ? (
+        <section className="rounded-[1.75rem] border border-white/10 bg-neutral-950 p-6">
+          <p className="text-lg font-semibold text-white">{labels.modelOption}</p>
+          <p className="mt-2 text-sm text-white/48">{labels.selectModel}</p>
+          <div className="mt-5 grid gap-3 md:grid-cols-2">
+            {allowedDbModels.map((model) => {
+              const isSelected = model.modelConfigId === selectedModelConfigId;
+              return (
+                <button
+                  key={model.modelConfigId}
+                  type="button"
+                  className={`rounded-2xl border p-4 text-left transition ${
+                    isSelected
+                      ? "border-primary bg-primary/10 ring-1 ring-primary/35"
+                      : "border-white/10 bg-black/30 hover:border-white/25 hover:bg-white/[0.05]"
+                  }`}
+                  onClick={() => onModelConfigChange?.(model.modelConfigId)}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="font-semibold text-white">{model.displayName}</p>
+                    <div className="flex items-center gap-2">
+                      {model.isPremium && (
+                        <span className="flex items-center gap-1 rounded-full border border-amber-400/25 bg-amber-400/10 px-2 py-0.5 text-[0.65rem] font-semibold uppercase text-amber-300">
+                          <Star className="h-2.5 w-2.5" aria-hidden="true" />
+                          PRO
+                        </span>
+                      )}
+                      {model.isDefault && (
+                        <span className="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[0.65rem] font-semibold uppercase text-primary-300">
+                          {labels.selectModel.slice(0, 3) === "Бүт" ? "Үндсэн" : "Default"}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {model.description && (
+                    <p className="mt-2 text-sm leading-6 text-white/54">{model.description}</p>
+                  )}
+                  <p className="mt-3 font-mono text-[0.65rem] text-white/30">{model.provider}/{model.modelKey}</p>
+                  {model.effectiveCreditCost != null && (
+                    <p className="mt-2 text-sm font-semibold text-white/80">
+                      {model.effectiveCreditCost}{" "}
+                      {model.effectiveCreditCost === 1 ? labels.credit : labels.credits}
+                    </p>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      ) : null}
+
+      {/* Legacy: static model options from products data (shown when no DB models) */}
+      {!useDbModels && product.modelOptions && product.modelOptions.length > 0 ? (
         <section className="rounded-[1.75rem] border border-white/10 bg-neutral-950 p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
