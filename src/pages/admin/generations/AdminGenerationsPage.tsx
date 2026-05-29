@@ -21,9 +21,14 @@ import type {
   AdminGenerationsFilters,
 } from "../../../lib/adminGenerations";
 import {
+  adminQueueGenerationRetry,
+  adminRefundGeneration,
   getAdminGenerationSummary,
+  isRefundEligible,
+  isRetryEligible,
   listAdminGenerations,
 } from "../../../lib/adminGenerations";
+import { AdminConfirmModal } from "./AdminConfirmModal";
 import { AdminGenerationDetailModal } from "./AdminGenerationDetailModal";
 
 const PAGE_SIZE = 25;
@@ -72,6 +77,12 @@ export function AdminGenerationsPage() {
   const [listError, setListError] = useState<string | null>(null);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  type PendingAction = { id: string; action: "refund" | "retry" };
+  const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
+  const [executing, setExecuting] = useState(false);
+  const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [detailRefreshKey, setDetailRefreshKey] = useState(0);
 
   function statusLabel(status: AdminGenerationStatus): string {
     const map: Record<string, string> = {
@@ -123,9 +134,40 @@ export function AdminGenerationsPage() {
       .catch(() => {/* summary is optional */});
   }, []);
 
+  useEffect(() => {
+    if (!feedback) return;
+    const timer = setTimeout(() => setFeedback(null), 4500);
+    return () => clearTimeout(timer);
+  }, [feedback]);
+
   function handlePageChange(next: number) {
     setPage(next);
     loadList(next);
+  }
+
+  async function executeAction(id: string, action: "refund" | "retry") {
+    setExecuting(true);
+    try {
+      if (action === "refund") {
+        await adminRefundGeneration(id);
+        setFeedback({ type: "success", message: g.refundSuccess });
+      } else {
+        await adminQueueGenerationRetry(id);
+        setFeedback({ type: "success", message: g.retrySuccess });
+      }
+      setDetailRefreshKey((k) => k + 1);
+      loadList(page);
+      getAdminGenerationSummary().then(setSummary).catch(() => {});
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "";
+      setFeedback({
+        type: "error",
+        message: (action === "refund" ? g.refundError : g.retryError) + (msg ? `: ${msg}` : ""),
+      });
+    } finally {
+      setExecuting(false);
+      setPendingAction(null);
+    }
   }
 
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
@@ -224,17 +266,33 @@ export function AdminGenerationsPage() {
       </button>
       <button
         type="button"
-        disabled
-        className="rounded-lg border border-white/[0.06] px-2.5 py-1 text-xs text-white/25 cursor-not-allowed"
-        title="Backend required"
+        disabled={!isRetryEligible(item.status) || executing}
+        title={
+          item.status === "credit_refunded"
+            ? g.retryRefundedLabel
+            : !isRetryEligible(item.status)
+              ? g.retryNotAllowed
+              : undefined
+        }
+        className={`rounded-lg border px-2.5 py-1 text-xs transition ${
+          isRetryEligible(item.status) && !executing
+            ? "border-white/10 text-white/70 hover:border-white/20 hover:text-white"
+            : "border-white/[0.06] text-white/25 cursor-not-allowed"
+        }`}
+        onClick={() => setPendingAction({ id: item.id, action: "retry" })}
       >
         {g.retryJob}
       </button>
       <button
         type="button"
-        disabled
-        className="rounded-lg border border-white/[0.06] px-2.5 py-1 text-xs text-white/25 cursor-not-allowed"
-        title="Backend required"
+        disabled={!isRefundEligible(item.status) || executing}
+        title={!isRefundEligible(item.status) ? g.refundNotAllowed : undefined}
+        className={`rounded-lg border px-2.5 py-1 text-xs transition ${
+          isRefundEligible(item.status) && !executing
+            ? "border-white/10 text-white/70 hover:border-white/20 hover:text-white"
+            : "border-white/[0.06] text-white/25 cursor-not-allowed"
+        }`}
+        onClick={() => setPendingAction({ id: item.id, action: "refund" })}
       >
         {g.refundCredit}
       </button>
@@ -264,6 +322,12 @@ export function AdminGenerationsPage() {
     outputsLabel: g.outputsLabel,
     outputsLoading: g.outputsLoading,
     retryLoad: g.retryLoad,
+    cancel: g.cancel,
+    refundCredit: g.refundCredit,
+    refundNotAllowed: g.refundNotAllowed,
+    retryJob: g.retryJob,
+    retryNotAllowed: g.retryNotAllowed,
+    retryRefundedLabel: g.retryRefundedLabel,
   };
 
   return (
@@ -410,6 +474,19 @@ export function AdminGenerationsPage() {
         <AdminNotice>{g.notice}</AdminNotice>
       </div>
 
+      {/* Confirm modal */}
+      {pendingAction && (
+        <AdminConfirmModal
+          title={pendingAction.action === "refund" ? g.refundTitle : g.retryTitle}
+          body={pendingAction.action === "refund" ? g.refundBody : g.retryBody}
+          confirmLabel={pendingAction.action === "refund" ? g.refundCredit : g.retryJob}
+          cancelLabel={g.cancel}
+          loading={executing}
+          onConfirm={() => executeAction(pendingAction.id, pendingAction.action)}
+          onCancel={() => { if (!executing) setPendingAction(null); }}
+        />
+      )}
+
       {/* Detail modal */}
       {selectedId && (
         <AdminGenerationDetailModal
@@ -417,7 +494,24 @@ export function AdminGenerationsPage() {
           labels={detailLabels}
           onClose={() => setSelectedId(null)}
           statusLabel={statusLabel}
+          onAction={(id, action) => setPendingAction({ id, action })}
+          busyAction={pendingAction?.id === selectedId ? pendingAction.action : null}
+          refreshKey={detailRefreshKey}
         />
+      )}
+
+      {/* Feedback banner */}
+      {feedback && (
+        <div className={`fixed bottom-6 right-6 z-[900] flex items-center gap-3 rounded-2xl border px-5 py-3 text-sm font-medium shadow-2xl shadow-black/60 transition ${
+          feedback.type === "success"
+            ? "border-emerald-400/25 bg-emerald-900/80 text-emerald-200"
+            : "border-red-400/25 bg-red-900/80 text-red-200"
+        }`}>
+          {feedback.message}
+          <button type="button" className="ml-1 text-white/40 hover:text-white" onClick={() => setFeedback(null)}>
+            ×
+          </button>
+        </div>
       )}
     </div>
   );

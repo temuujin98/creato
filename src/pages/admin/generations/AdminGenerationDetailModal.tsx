@@ -2,6 +2,7 @@ import {
   CalendarDays,
   Hash,
   ImageOff,
+  Loader2,
   LoaderCircle,
   Mail,
   User,
@@ -13,11 +14,12 @@ import type {
   AdminGenerationDetail,
   AdminGenerationOutput,
 } from "../../../lib/adminGenerations";
-import { getAdminGenerationDetail } from "../../../lib/adminGenerations";
+import { getAdminGenerationDetail, isRefundEligible, isRetryEligible } from "../../../lib/adminGenerations";
 import type { AdminGenerationStatus } from "../../../lib/adminGenerations";
 import { CreationStatusBadge } from "../../../components/my-creations/CreationStatusBadge";
 
 type Labels = {
+  cancel: string;
   close: string;
   detailTitle: string;
   fieldCompletedAt: string;
@@ -39,13 +41,21 @@ type Labels = {
   outputsEmpty: string;
   outputsLabel: string;
   outputsLoading: string;
+  refundCredit: string;
+  refundNotAllowed: string;
+  retryJob: string;
   retryLoad: string;
+  retryNotAllowed: string;
+  retryRefundedLabel: string;
 };
 
 type Props = {
+  busyAction?: "refund" | "retry" | null;
   generationId: string;
   labels: Labels;
+  onAction?: (id: string, action: "refund" | "retry") => void;
   onClose: () => void;
+  refreshKey?: number;
   statusLabel: (status: AdminGenerationStatus) => string;
 };
 
@@ -83,9 +93,12 @@ function formatDate(value: string | null | undefined) {
 }
 
 export function AdminGenerationDetailModal({
+  busyAction,
   generationId,
   labels,
+  onAction,
   onClose,
+  refreshKey,
   statusLabel,
 }: Props) {
   const closeRef = useRef<HTMLButtonElement | null>(null);
@@ -130,7 +143,7 @@ export function AdminGenerationDetailModal({
   useEffect(() => {
     load();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [generationId]);
+  }, [generationId, refreshKey]);
 
   const activeOutput: AdminGenerationOutput | undefined =
     detail?.outputs.find((o) => o.id === activeOutputId) ??
@@ -314,6 +327,45 @@ export function AdminGenerationDetailModal({
                     </div>
                     <Field label={labels.fieldErrorCode} value={detail.errorCode} mono />
                     <Field label={labels.fieldErrorMessage} value={detail.errorMessage} />
+                  </div>
+                )}
+
+                {detail && (
+                  <div className="flex flex-col gap-2 pt-2 border-t border-white/[0.08]">
+                    <button
+                      type="button"
+                      disabled={!isRetryEligible(detail.status) || busyAction === "retry"}
+                      title={
+                        detail.status === "credit_refunded"
+                          ? labels.retryRefundedLabel
+                          : !isRetryEligible(detail.status)
+                            ? labels.retryNotAllowed
+                            : undefined
+                      }
+                      className={`flex items-center justify-center gap-2 rounded-xl border px-4 py-2 text-sm transition ${
+                        isRetryEligible(detail.status) && busyAction !== "retry"
+                          ? "border-white/10 text-white/70 hover:border-white/20 hover:text-white"
+                          : "border-white/[0.06] text-white/25 cursor-not-allowed"
+                      }`}
+                      onClick={() => onAction?.(detail.id, "retry")}
+                    >
+                      {busyAction === "retry" && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />}
+                      {labels.retryJob}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!isRefundEligible(detail.status) || busyAction === "refund"}
+                      title={!isRefundEligible(detail.status) ? labels.refundNotAllowed : undefined}
+                      className={`flex items-center justify-center gap-2 rounded-xl border px-4 py-2 text-sm transition ${
+                        isRefundEligible(detail.status) && busyAction !== "refund"
+                          ? "border-white/10 text-white/70 hover:border-white/20 hover:text-white"
+                          : "border-white/[0.06] text-white/25 cursor-not-allowed"
+                      }`}
+                      onClick={() => onAction?.(detail.id, "refund")}
+                    >
+                      {busyAction === "refund" && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />}
+                      {labels.refundCredit}
+                    </button>
                   </div>
                 )}
               </aside>

@@ -227,6 +227,51 @@ export async function listAdminGenerations(
   };
 }
 
+// Eligibility helpers
+export function isRefundEligible(status: AdminGenerationStatus): boolean {
+  return [
+    "failed", "credit_reserved", "queued",
+    "processing", "completed", "credit_spent", "canceled",
+  ].includes(status);
+}
+
+export function isRetryEligible(status: AdminGenerationStatus): boolean {
+  return status === "failed";
+}
+
+// Admin mutation RPCs
+export async function adminRefundGeneration(
+  generationId: string,
+): Promise<{ transactionId: string; newStatus: string }> {
+  if (!supabase) throw new Error("Supabase is not configured.");
+
+  const { data, error } = await supabase.rpc("admin_refund_generation", {
+    p_generation_id: generationId,
+  });
+
+  if (error) throw new Error(error.message);
+
+  const row = (data as Array<{ transaction_id: string; new_status: string }>)[0];
+  if (!row) throw new Error("Unexpected empty response from refund RPC.");
+  return { transactionId: row.transaction_id, newStatus: row.new_status };
+}
+
+export async function adminQueueGenerationRetry(
+  generationId: string,
+): Promise<{ newStatus: string; retryCount: number }> {
+  if (!supabase) throw new Error("Supabase is not configured.");
+
+  const { data, error } = await supabase.rpc("admin_queue_generation_retry", {
+    p_generation_id: generationId,
+  });
+
+  if (error) throw new Error(error.message);
+
+  const row = (data as Array<{ new_status: string; retry_count: number }>)[0];
+  if (!row) throw new Error("Unexpected empty response from retry RPC.");
+  return { newStatus: row.new_status, retryCount: row.retry_count };
+}
+
 export async function getAdminGenerationDetail(
   id: string,
 ): Promise<AdminGenerationDetail> {
