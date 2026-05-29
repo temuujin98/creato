@@ -83,7 +83,7 @@ export function UserMenu() {
 
   // Consistent dark-only item style (no dark: prefix needed — always dark)
   const itemClass =
-    "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-white/75 transition hover:bg-white/[0.07] hover:text-white [&_svg]:text-white/45";
+    "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-white/90 transition hover:bg-white/[0.07] hover:text-white [&_svg]:text-white/50 [&_svg]:transition hover:[&_svg]:text-white/80";
 
   return (
     <div className="relative z-[120] hidden sm:block" ref={menuRef}>
@@ -106,7 +106,7 @@ export function UserMenu() {
       {isOpen ? (
         <div className="absolute right-0 top-full z-[999] mt-2.5 w-64 max-w-[calc(100vw-2rem)] rounded-2xl border border-white/10 bg-neutral-950 p-1.5 shadow-2xl shadow-black/70">
           {/* Identity header */}
-          <div className="flex items-center gap-3 border-b border-white/8 px-3 py-3">
+          <div className="flex items-center gap-3 border-b border-white/[0.08] px-3 py-3">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-black text-sm font-semibold text-white/80">
               {avatarSrc ? (
                 <img src={avatarSrc} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
@@ -116,7 +116,7 @@ export function UserMenu() {
             </div>
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-white/90">{accountLabel}</p>
-              <p className="mt-0.5 truncate text-xs text-white/40">{user.email}</p>
+              <p className="mt-0.5 truncate text-xs text-white/50">{user.email}</p>
             </div>
           </div>
 
@@ -135,7 +135,7 @@ export function UserMenu() {
             ))}
 
             {/* Divider */}
-            <div className="my-1 mx-2 border-t border-white/8" />
+            <div className="my-1 mx-2 border-t border-white/[0.08]" />
 
             {/* Personal information */}
             <button
@@ -148,16 +148,16 @@ export function UserMenu() {
             </button>
 
             {/* Settings — disabled / soon */}
-            <div className="flex cursor-not-allowed items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-white/30 [&_svg]:text-white/20">
+            <div className="flex cursor-not-allowed items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-white/50 [&_svg]:text-white/50">
               <Settings className="h-4 w-4" aria-hidden="true" />
               <span>{t.nav.settings}</span>
-              <span className="ml-auto rounded-full bg-white/8 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-white/35">
+              <span className="ml-auto rounded-full border border-white/10 bg-white/[0.08] px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-white/50">
                 {t.nav.comingSoon}
               </span>
             </div>
 
             {/* Divider */}
-            <div className="my-1 mx-2 border-t border-white/8" />
+            <div className="my-1 mx-2 border-t border-white/[0.08]" />
 
             {/* Logout */}
             <button
