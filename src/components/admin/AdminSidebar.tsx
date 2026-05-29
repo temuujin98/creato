@@ -1,5 +1,6 @@
 import {
   ArrowLeft,
+  BarChart3,
   CreditCard,
   Cpu,
   FolderTree,
@@ -22,6 +23,7 @@ export function AdminSidebar() {
     { label: t.admin.sidebar.creditPackages, to: "/admin/credit-packages", icon: CreditCard },
     { label: t.admin.sidebar.generations, to: "/admin/generations", icon: Images },
     { label: t.admin.sidebar.modelSettings, to: "/admin/model-settings", icon: Cpu },
+    { label: t.admin.sidebar.analytics, to: "/admin/analytics", icon: BarChart3 },
   ];
 
   return (

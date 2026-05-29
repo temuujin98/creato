@@ -15,6 +15,7 @@ import { AdminCategoriesPage } from "../pages/admin/categories";
 import { AdminCreditPackagesPage } from "../pages/admin/credit-packages";
 import { AdminDashboardPage } from "../pages/admin/dashboard";
 import { AdminGenerationsPage } from "../pages/admin/generations";
+import { AdminAnalyticsPage } from "../pages/admin/analytics/AdminAnalyticsPage";
 import { AdminModelSettingsPage } from "../pages/admin/model-settings";
 import {
   AdminPresetEditorPage,
@@ -71,6 +72,7 @@ export function AppRouter() {
         <Route path="credit-packages" element={<AdminCreditPackagesPage />} />
         <Route path="generations" element={<AdminGenerationsPage />} />
         <Route path="model-settings" element={<AdminModelSettingsPage />} />
+        <Route path="analytics" element={<AdminAnalyticsPage />} />
       </Route>
     </Routes>
   );
