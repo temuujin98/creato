@@ -31,18 +31,11 @@ const ITEMS = [
   },
 ]
 
-function Chevron({ open }: { open: boolean }) {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
-      style={{ transition: 'transform .28s cubic-bezier(.34,1.3,.5,1)', transform: open ? 'rotate(180deg)' : 'none', flexShrink: 0 }}>
-      <polyline points="6 9 12 15 18 9" />
-    </svg>
-  )
-}
-
 export default function FAQ({ title = 'Түгээмэл асуултууд', isVisible = true }: FAQProps) {
-  const [open, setOpen] = useState<number | null>(0)
+  const [open, setOpen] = useState<number | null>(null)
+
   if (!isVisible) return null
+
   return (
     <section id="help" style={{ padding: '104px 0', background: '#0C0B1A' }}>
       <div style={{ maxWidth: 780, margin: '0 auto', padding: '0 28px' }}>
@@ -53,19 +46,24 @@ export default function FAQ({ title = 'Түгээмэл асуултууд', isV
           <h2 style={{ fontSize: 'clamp(26px,3vw,40px)', fontWeight: 900, letterSpacing: '-1.5px', lineHeight: 1.05, color: '#F5F4FA' }}>{title}</h2>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {ITEMS.map((item, i) => {
             const isOpen = open === i
             return (
-              <div key={i} style={{ background: '#12101F', border: `1px solid ${isOpen ? 'rgba(139,92,246,.3)' : 'rgba(255,255,255,.07)'}`, borderRadius: 14, overflow: 'hidden', transition: 'border-color .3s' }}>
+              <div key={i} style={{ background: '#12101F', border: `1px solid ${isOpen ? 'rgba(139,92,246,.3)' : 'rgba(255,255,255,.07)'}`, borderRadius: 12, overflow: 'hidden', transition: 'border-color .2s' }}>
                 <button
                   onClick={() => setOpen(isOpen ? null : i)}
-                  style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, padding: '20px 22px', background: 'transparent', border: 'none', cursor: 'pointer', color: '#F5F4FA', textAlign: 'left' }}>
-                  <span style={{ fontSize: 14.5, fontWeight: 700, letterSpacing: '-.2px', lineHeight: 1.4 }}>{item.q}</span>
-                  <span style={{ color: isOpen ? '#A78BFA' : '#4A4858', transition: 'color .28s' }}><Chevron open={isOpen} /></span>
+                  style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, padding: '18px 22px', background: 'none', border: 'none', cursor: 'pointer', color: isOpen ? '#C4B5FD' : '#F5F4FA', textAlign: 'left', fontFamily: 'inherit', fontSize: 15, fontWeight: 600, letterSpacing: '-.2px', transition: 'color .2s' }}>
+                  <span>{item.q}</span>
+                  <span style={{ width: 22, height: 22, borderRadius: 6, border: `1px solid ${isOpen ? 'rgba(139,92,246,1)' : 'rgba(255,255,255,.07)'}`, background: isOpen ? 'rgba(139,92,246,.14)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all .25s', transform: isOpen ? 'rotate(45deg)' : 'none' }}>
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                      <line x1="5" y1="1" x2="5" y2="9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                      <line x1="1" y1="5" x2="9" y2="5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                    </svg>
+                  </span>
                 </button>
-                <div style={{ maxHeight: isOpen ? 300 : 0, overflow: 'hidden', transition: 'max-height .35s cubic-bezier(.4,0,.2,1)' }}>
-                  <p style={{ fontSize: 13.5, color: '#8E8C9E', lineHeight: 1.8, padding: '0 22px 22px', margin: 0 }}>{item.a}</p>
+                <div style={{ maxHeight: isOpen ? 320 : 0, overflow: 'hidden', transition: 'max-height .38s cubic-bezier(.4,0,.2,1)' }}>
+                  <p style={{ fontSize: 14, color: '#8E8C9E', lineHeight: 1.8, padding: '0 22px 20px', margin: 0 }}>{item.a}</p>
                 </div>
               </div>
             )
