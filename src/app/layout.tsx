@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Roboto, Roboto_Mono } from 'next/font/google'
+import { Toaster } from 'sonner'
 import './globals.css'
 
 const roboto = Roboto({
@@ -26,6 +27,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="mn" className="dark">
       <body className={`${roboto.variable} ${robotoMono.variable} font-sans bg-bg text-t-default antialiased`}>
         {children}
+        <Toaster richColors position="top-right" />
       </body>
     </html>
   )

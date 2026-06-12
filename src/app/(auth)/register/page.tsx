@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 
 function getPwStrength(v: string): { width: string; color: string; label: string } {
@@ -16,6 +17,16 @@ function getPwStrength(v: string): { width: string; color: string; label: string
   if (str === 2) return { width: '50%', color: '#F59E0B', label: 'Дундаж' }
   if (str === 3) return { width: '75%', color: '#10B981', label: 'Сайн' }
   return { width: '100%', color: '#6EE7B7', label: 'Маш найдвартай' }
+}
+
+function mapRegisterError(message: string): string {
+  if (message.includes('User already registered') || message.includes('already registered')) {
+    return 'Энэ имэйл бүртгэлтэй байна'
+  }
+  if (message.includes('Password should be at least 6 characters')) {
+    return 'Нууц үг хамгийн багадаа 6 тэмдэгт байх ёстой'
+  }
+  return 'Бүртгэхэд алдаа гарлаа. Дахин оролдоно уу.'
 }
 
 function GoogleIcon() {
@@ -37,32 +48,38 @@ export default function RegisterPage() {
   const [showPw, setShowPw] = useState(false)
   const [agree, setAgree] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
 
   const pw = getPwStrength(password)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!agree) { setError('Үйлчилгээний нөхцөлийг зөвшөөрнө үү.'); return }
-    setLoading(true)
-    setError('')
-
-    const supabase = createClient()
-    const { error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { display_name: name } },
-    })
-
-    if (authError) {
-      setError(authError.message)
-      setLoading(false)
+    if (!agree) {
+      toast.error('Үйлчилгээний нөхцөлийг зөвшөөрнө үү.')
       return
     }
+    setLoading(true)
 
-    setSuccess(true)
-    setTimeout(() => router.push('/dashboard'), 1500)
+    try {
+      const supabase = createClient()
+      const { error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { display_name: name } },
+      })
+
+      if (authError) {
+        toast.error(mapRegisterError(authError.message))
+        setLoading(false)
+        return
+      }
+
+      setSuccess(true)
+      setTimeout(() => router.push('/dashboard'), 1500)
+    } catch {
+      toast.error('Бүртгэхэд алдаа гарлаа. Дахин оролдоно уу.')
+      setLoading(false)
+    }
   }
 
   return (
@@ -112,11 +129,6 @@ export default function RegisterPage() {
             <span style={{ flex: 1, height: 1, background: 'rgba(255,255,255,.08)' }} />
           </div>
 
-          {error && (
-            <div style={{ background: 'rgba(124,58,237,.1)', border: '1px solid rgba(124,58,237,.25)', borderRadius: 10, padding: '12px 14px', fontSize: 13, color: '#9D5FF5', marginBottom: 20 }}>
-              {error}
-            </div>
-          )}
           {success && (
             <div style={{ background: 'rgba(16,185,129,.1)', border: '1px solid rgba(16,185,129,.25)', borderRadius: 10, padding: '12px 14px', fontSize: 13, color: '#10B981', marginBottom: 20 }}>
               Амжилттай бүртгүүллээ! Нэвтэрч байна...
@@ -152,7 +164,7 @@ export default function RegisterPage() {
             </div>
 
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 20 }}>
-              <input type="checkbox" id="agree" checked={agree} onChange={e => setAgree(e.target.checked)} required
+              <input type="checkbox" id="agree" checked={agree} onChange={e => setAgree(e.target.checked)}
                 style={{ appearance: 'none', WebkitAppearance: 'none', width: 18, height: 18, minWidth: 18, border: '2px solid rgba(255,255,255,.2)', borderRadius: 5, background: agree ? '#7C3AED' : 'transparent', flexShrink: 0, cursor: 'pointer', marginTop: 1 }} />
               <label htmlFor="agree" style={{ fontSize: 13, color: '#A1A1AA', lineHeight: 1.5, cursor: 'pointer' }}>
                 <a href="#" style={{ color: '#9D5FF5', textDecoration: 'none' }}>Үйлчилгээний нөхцөл</a> болон <a href="#" style={{ color: '#9D5FF5', textDecoration: 'none' }}>Нууцлалын бодлого</a>-г зөвшөөрч байна

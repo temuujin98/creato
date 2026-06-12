@@ -3,7 +3,14 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
+
+function mapLoginError(message: string): string {
+  if (message.includes('Invalid login credentials')) return 'Имэйл эсвэл нууц үг буруу'
+  if (message.includes('Email not confirmed')) return 'Имэйлээ баталгаажуулна уу'
+  return 'Нэвтрэхэд алдаа гарлаа. Дахин оролдоно уу.'
+}
 
 export default function LoginPage() {
   const router = useRouter()
@@ -11,24 +18,27 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [showPw, setShowPw] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
-    setError('')
 
-    const supabase = createClient()
-    const { error: authError } = await supabase.auth.signInWithPassword({ email, password })
+    try {
+      const supabase = createClient()
+      const { error: authError } = await supabase.auth.signInWithPassword({ email, password })
 
-    if (authError) {
-      setError('Имэйл эсвэл нууц үг буруу байна.')
+      if (authError) {
+        toast.error(mapLoginError(authError.message))
+        setLoading(false)
+        return
+      }
+
+      router.push('/dashboard')
+      router.refresh()
+    } catch {
+      toast.error('Нэвтрэхэд алдаа гарлаа. Дахин оролдоно уу.')
       setLoading(false)
-      return
     }
-
-    router.push('/dashboard')
-    router.refresh()
   }
 
   return (
@@ -72,12 +82,6 @@ export default function LoginPage() {
               эсвэл
               <span style={{ flex: 1, height: 1, background: 'rgba(255,255,255,.08)' }} />
             </div>
-
-            {error && (
-              <div style={{ background: 'rgba(124,58,237,.1)', border: '1px solid rgba(124,58,237,.25)', borderRadius: 10, padding: '12px 14px', fontSize: 13, color: '#9D5FF5', marginBottom: 20 }}>
-                {error}
-              </div>
-            )}
 
             <form onSubmit={handleSubmit}>
               <div style={{ marginBottom: 18 }}>
