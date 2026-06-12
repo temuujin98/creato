@@ -225,6 +225,20 @@ Launch бэлтгэл:
 - MVP checklist (docs/01)-ийн бүх ☑-г шалгаад production deploy.
 ```
 
+### Design parity TODO (дизайнд байгаа ч хараахан хэрэгжээгүй)
+
+**CLIENT** (design-reference/client/ дагуу):
+- [ ] Header: user menu dropdown (нэр/имэйл, Тохиргоо, Гарах) — `layout.jsx`
+- [ ] Header: notification bell + dropdown (хоосон төлөв OK, бодит notif Phase 8+) — `layout.jsx`
+- [ ] Sidebar collapse/expand төлөв `localStorage`-д хадгалах (одоо session-д л үлдэнэ)
+- [ ] Image upload компонент (`requires_image` presets) — Phase 4C
+- [ ] My Presets / Create Preset (creator marketplace) — MVP-д hidden/disabled
+
+**ADMIN** (Phase 5-д хийгдэнэ, давхцахгүй):
+- [ ] Header user menu, notification dropdown — `admin/layout.jsx`
+
+> Эдгээрийг тус бүр design-reference-тэй харьцуулж pixel-perfect хэрэгжүүлнэ.
+
 ---
 
 ## Ажиллах горим (санамж)
