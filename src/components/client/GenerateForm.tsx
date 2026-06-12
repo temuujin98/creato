@@ -4,6 +4,7 @@ import { useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import type { PresetPublic, PresetFieldPublic } from '@/types/preset'
+import ImageUpload from './ImageUpload'
 
 const GRAD_THUMBS = [
   'linear-gradient(160deg,#1A0A2E,#3D1B69,#7C3AED)',
@@ -16,6 +17,7 @@ interface GenerateFormProps {
   preset: PresetPublic
   fields: PresetFieldPublic[]
   walletBalance: number
+  userId: string
 }
 
 type GenState = 'idle' | 'loading' | 'done' | 'error'
@@ -27,10 +29,11 @@ interface GenResult {
   creditCost: number
 }
 
-export default function GenerateForm({ preset, fields, walletBalance }: GenerateFormProps) {
+export default function GenerateForm({ preset, fields, walletBalance, userId }: GenerateFormProps) {
   const router = useRouter()
   // Optimistic local balance — updated immediately on success, router.refresh() syncs server
   const [localBalance, setLocalBalance] = useState(walletBalance)
+  const [uploadedPaths, setUploadedPaths] = useState<string[]>([])
   const [inputs, setInputs] = useState<Record<string, string>>(() => {
     const init: Record<string, string> = {}
     for (const f of fields) init[f.field_key] = ''
@@ -45,6 +48,7 @@ export default function GenerateForm({ preset, fields, walletBalance }: Generate
 
   const creditCost = preset.credit_cost
   const canAfford = localBalance >= creditCost
+  const imageReady = !preset.requires_image || uploadedPaths.length >= preset.min_image_count
 
   const stopPolling = useCallback(() => {
     if (pollRef.current) {
@@ -88,6 +92,12 @@ export default function GenerateForm({ preset, fields, walletBalance }: Generate
       }
     }
 
+    // Validate image upload requirement
+    if (preset.requires_image && uploadedPaths.length < preset.min_image_count) {
+      setErrorMsg(`Дор хаяж ${preset.min_image_count} зураг оруулна уу.`)
+      return
+    }
+
     setState('loading')
     stateRef.current = 'loading'
     setErrorMsg('')
@@ -101,6 +111,7 @@ export default function GenerateForm({ preset, fields, walletBalance }: Generate
           presetSlug: preset.slug,
           userInputs: inputs,
           selectedSize,
+          inputImagePaths: preset.requires_image ? uploadedPaths : [],
         }),
       })
 
@@ -195,6 +206,19 @@ export default function GenerateForm({ preset, fields, walletBalance }: Generate
       <div style={{ display: 'grid', gridTemplateColumns: '380px 1fr', gap: 20, alignItems: 'start' }}>
         {/* LEFT: Options */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+          {/* Image upload — shown only for requires_image presets */}
+          {preset.requires_image && (
+            <ImageUpload
+              userId={userId}
+              minCount={preset.min_image_count}
+              maxCount={preset.max_image_count}
+              allowedTypes={preset.allowed_file_types ?? ['jpg', 'jpeg', 'png', 'webp']}
+              maxFileSizeMb={preset.max_file_size_mb ?? 10}
+              guideText={preset.upload_guide_text}
+              onChange={setUploadedPaths}
+            />
+          )}
 
           {/* Dynamic fields */}
           {fields.length > 0 && (
@@ -381,17 +405,17 @@ export default function GenerateForm({ preset, fields, walletBalance }: Generate
             ) : (
               <button
                 onClick={handleGenerate}
-                disabled={state === 'loading'}
+                disabled={state === 'loading' || !imageReady}
                 style={{
                   width: '100%',
-                  background: state === 'loading' ? 'rgba(124,58,237,.3)' : 'linear-gradient(135deg,#7C3AED,#6D28D9)',
+                  background: (state === 'loading' || !imageReady) ? 'rgba(124,58,237,.3)' : 'linear-gradient(135deg,#7C3AED,#6D28D9)',
                   color: '#fff',
                   border: 'none',
                   borderRadius: 10,
                   padding: '14px',
                   fontSize: 15,
                   fontWeight: 600,
-                  cursor: state === 'loading' ? 'not-allowed' : 'pointer',
+                  cursor: (state === 'loading' || !imageReady) ? 'not-allowed' : 'pointer',
                   boxShadow: state === 'loading' ? 'none' : '0 0 20px rgba(124,58,237,.35)',
                   fontFamily: 'inherit',
                   transition: 'all .2s',

@@ -16,6 +16,9 @@ export type PresetPublic = {
   requires_image: boolean
   min_image_count: number
   max_image_count: number
+  allowed_file_types: string[]
+  max_file_size_mb: number
+  upload_guide_text: string | null
   allowed_sizes: string[]
   output_count: number
   // SECURITY: base_prompt, negative_prompt, prompt_suffix, quality_prompt,

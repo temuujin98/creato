@@ -14,6 +14,7 @@ interface RunWithRetryOptions extends Omit<GenerateOptions, 'model'> {
   fallbackProvider: string | null
   fallbackModel: string | null
   retryLimit: number
+  inputImagePaths?: string[]
 }
 
 export interface ProviderResult {

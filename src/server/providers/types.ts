@@ -6,6 +6,8 @@ export interface GenerateOptions {
   model: string
   size: string        // e.g. "1:1", "16:9"
   outputCount: number
+  // TODO Phase 4C: image-to-image — pass input image buffers to Gemini/OpenAI edit API
+  inputImagePaths?: string[]
 }
 
 export interface ImageProvider {

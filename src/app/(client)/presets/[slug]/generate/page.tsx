@@ -21,6 +21,7 @@ export default async function GeneratePage({ params }: PageProps) {
         'id, slug, name, short_description, full_description, user_guide, credit_cost,' +
         'category_name, is_featured, is_trending, is_new, is_popular, sort_order,' +
         'example_image_urls, requires_image, min_image_count, max_image_count,' +
+        'allowed_file_types, max_file_size_mb, upload_guide_text,' +
         'allowed_sizes, output_count'
       )
       .eq('slug', slug)
@@ -50,6 +51,7 @@ export default async function GeneratePage({ params }: PageProps) {
       preset={preset}
       fields={fields}
       walletBalance={balance}
+      userId={user.id}
     />
   )
 }

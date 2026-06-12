@@ -40,15 +40,28 @@ export async function POST(req: NextRequest) {
   }
 
   // 3. Parse body
-  let body: { presetSlug: string; userInputs: Record<string, string>; selectedSize: string }
+  let body: {
+    presetSlug: string
+    userInputs: Record<string, string>
+    selectedSize: string
+    inputImagePaths?: string[]
+  }
   try {
     body = await req.json()
   } catch {
     return NextResponse.json({ error: 'Буруу хүсэлт' }, { status: 400 })
   }
-  const { presetSlug, userInputs = {}, selectedSize = '1:1' } = body
+  const { presetSlug, userInputs = {}, selectedSize = '1:1', inputImagePaths = [] } = body
   if (!presetSlug) {
     return NextResponse.json({ error: 'presetSlug шаардлагатай' }, { status: 400 })
+  }
+
+  // Validate image path ownership — each path must start with {user_id}/
+  // This prevents a user from referencing another user's uploaded files
+  for (const p of inputImagePaths) {
+    if (!p.startsWith(`${user.id}/`)) {
+      return NextResponse.json({ error: 'Зөвшөөрөлгүй зургийн зам' }, { status: 403 })
+    }
   }
 
   // 4. Load preset + fields with ALL server-only columns (admin client, base table)
@@ -117,6 +130,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Зөвшөөрөгдөөгүй хэмжээ' }, { status: 400 })
   }
 
+  // 5b. Validate image upload requirement
+  if (preset.requires_image) {
+    if (inputImagePaths.length < preset.min_image_count) {
+      return NextResponse.json(
+        { error: `Дор хаяж ${preset.min_image_count} зураг шаардлагатай` },
+        { status: 422 }
+      )
+    }
+    if (inputImagePaths.length > preset.max_image_count) {
+      return NextResponse.json(
+        { error: `Хамгийн ихдээ ${preset.max_image_count} зураг оруулах боломжтой` },
+        { status: 422 }
+      )
+    }
+  }
+
   // 6. Validate required fields via buildPrompt (throws on missing required)
   let compiledPrompt: string
   let negativePrompt: string | null
@@ -157,7 +186,8 @@ export async function POST(req: NextRequest) {
       selected_size: selectedSize,
       output_count: preset.output_count,
       credit_cost: preset.credit_cost,
-      compiled_prompt: compiledPrompt, // server-only column
+      compiled_prompt: compiledPrompt,       // server-only column
+      input_image_paths: inputImagePaths,    // empty array for text-only presets
     })
     .select('id')
     .single()
@@ -186,6 +216,14 @@ export async function POST(req: NextRequest) {
   }
 
   // 9. Run provider (retry + fallback)
+  // TODO Phase 4C image-to-image: when inputImagePaths.length > 0, download the files
+  // from Storage and pass buffers to Gemini (image+text parts) or OpenAI images.edit().
+  // Currently the compiled prompt already references the product context via text fields,
+  // so generation proceeds as text-to-image and the reference images are stored for future use.
+  if (inputImagePaths.length > 0) {
+    console.log(`[generate] preset requires_image — ${inputImagePaths.length} input(s) stored, text-to-image mode for now`)
+  }
+
   let providerResult: Awaited<ReturnType<typeof runWithRetry>>
   try {
     providerResult = await runWithRetry({
@@ -198,6 +236,7 @@ export async function POST(req: NextRequest) {
       retryLimit: preset.retry_limit ?? 1,
       size: selectedSize,
       outputCount: preset.output_count,
+      inputImagePaths,
     })
   } catch (err) {
     // All providers failed → refund
