@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Creato — Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#05050A;--sur:#0D0D14;--card:#12121C;--p:#7C3AED;--pl:#9D5FF5;--blue:#38BDF8;--pink:#EC4899;--t:#FFF;--tm:#A1A1AA;--tf:#52525B;--bdr:rgba(255,255,255,.08);--bdrh:rgba(255,255,255,.15);--r:16px;--rs:8px;--rl:24px}
+body{margin:0;font-family:'Roboto',sans-serif;background:var(--bg);color:var(--t);-webkit-font-smoothing:antialiased;transition:background .25s,color .25s}
+[data-theme="light"] ::-webkit-scrollbar-thumb{background:rgba(0,0,0,.12)}
+
+
+[data-theme="light"] .pkg-card-popular { background:linear-gradient(160deg,rgba(124,58,237,.07),#FFFFFF) !important; }
+[data-theme="light"] .app-card { background:#FFFFFF !important; border-color:rgba(0,0,0,.09) !important; }
+[data-theme="light"] .wallet-card { background:linear-gradient(135deg,rgba(124,58,237,.12),rgba(109,40,217,.06)) !important; }
+[data-theme="light"] .ghost-btn { background:rgba(0,0,0,.06) !important; border-color:rgba(0,0,0,.12) !important; color:var(--t) !important; }
+[data-theme="light"] .preset-card { background:#FFFFFF !important; border-color:rgba(0,0,0,.09) !important; }
+[data-theme="light"] .modal-card { background:#FFFFFF !important; border-color:rgba(0,0,0,.1) !important; }
+
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:3px}
+::selection{background:rgba(124,58,237,.3)}
+input,select,textarea,button{font-family:inherit}
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" src="client/layout.jsx"></script>
+<script type="text/babel" src="client/pages-main.jsx"></script>
+<script type="text/babel" src="client/pages-secondary.jsx"></script>
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+function App() {
+  const [page, setPage] = useState(() => {
+    const h = window.location.hash.replace('#','');
+    return h || 'dashboard';
+  });
+  const [selectedPreset, setSelectedPreset] = useState(null);
+
+  function nav(p, data) {
+    setPage(p);
+    window.location.hash = p;
+    window.scrollTo(0,0);
+  }
+
+  function onPreset(preset) {
+    setSelectedPreset(preset);
+    nav('preset-detail');
+  }
+
+  useEffect(() => {
+    const handler = () => {
+      const h = window.location.hash.replace('#','');
+      if(h) setPage(h);
+    };
+    window.addEventListener('hashchange', handler);
+    return () => window.removeEventListener('hashchange', handler);
+  }, []);
+
+  const renderPage = () => {
+    switch(page) {
+      case 'dashboard': return <DashboardPage nav={nav} />;
+      case 'presets': return <PresetsPage nav={nav} onPreset={onPreset} />;
+      case 'preset-detail': return <PresetDetailPage preset={selectedPreset} nav={nav} />;
+      case 'generate': return <GeneratePage preset={selectedPreset} nav={nav} />;
+      case 'my-images': return <MyImagesPage nav={nav} />;
+      case 'my-presets': return <MyPresetsPage nav={nav} />;
+      case 'create-preset': return <CreatePresetPage nav={nav} />;
+      case 'credits': return <CreditsPage nav={nav} />;
+      case 'billing': return <BillingPage />;
+      case 'transactions': return <TransactionsPage />;
+      case 'settings': return <SettingsPage />;
+      case 'help': return <HelpPage />;
+      case 'company': return <CompanyPage nav={nav} />;
+      default: return <DashboardPage nav={nav} />;
+    }
+  };
+
+  return (
+    <AppShell page={page} nav={nav}>
+      {renderPage()}
+    </AppShell>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

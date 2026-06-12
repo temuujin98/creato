@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Creato — Admin Panel</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#05050A;--sur:#0D0D14;--card:#12121C;--p:#7C3AED;--pl:#9D5FF5;--blue:#38BDF8;--pink:#EC4899;--t:#FFF;--tm:#A1A1AA;--tf:#52525B;--bdr:rgba(255,255,255,.08);--bdrh:rgba(255,255,255,.15);--r:16px;--rs:8px}
+body{margin:0;font-family:'Roboto',sans-serif;background:var(--bg);color:var(--t);-webkit-font-smoothing:antialiased;transition:background .25s,color .25s}
+[data-theme="light"]{--bg:#F5F4FF;--sur:#EDECFF;--card:#FFFFFF;--t:#0A0A14;--tm:#52525B;--tf:#A1A1AA;--bdr:rgba(0,0,0,.08);--bdrh:rgba(0,0,0,.18);--pg:rgba(124,58,237,.15)}
+[data-theme="light"] ::-webkit-scrollbar-thumb{background:rgba(0,0,0,.12)}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:3px}
+::selection{background:rgba(124,58,237,.3)}
+input,select,textarea,button{font-family:inherit}
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" src="admin/layout.jsx"></script>
+<script type="text/babel" src="admin/pages-dash.jsx"></script>
+<script type="text/babel" src="admin/pages-preset-edit.jsx"></script>
+<script type="text/babel" src="admin/pages-config.jsx"></script>
+<script type="text/babel" src="admin/pages-users.jsx"></script>
+<script type="text/babel" src="admin/pages-userdetail.jsx"></script>
+<script type="text/babel" src="admin/pages-reports.jsx"></script>
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+function AdminApp() {
+  const [page, setPage] = useState(() => {
+    const h = window.location.hash.replace('#','');
+    return h || 'admin-dash';
+  });
+
+  function nav(p) {
+    setPage(p);
+    window.location.hash = p;
+    window.scrollTo(0,0);
+  }
+
+  useEffect(() => {
+    const handler = () => {
+      const h = window.location.hash.replace('#','');
+      if(h) setPage(h);
+    };
+    window.addEventListener('hashchange', handler);
+    return () => window.removeEventListener('hashchange', handler);
+  }, []);
+
+  const renderPage = () => {
+    switch(page) {
+      case 'admin-dash': return <AdminDashPage nav={nav} />;
+      case 'admin-presets': return <AdminPresetsPage nav={nav} />;
+      case 'admin-preset-edit': return <AdminPresetEditPage nav={nav} />;
+      case 'admin-preset-reviews': return <AdminPresetReviewsPage nav={nav} />;
+      case 'admin-categories': return <AdminCategoriesPage />;
+      case 'admin-types': return <AdminTypesPage />;
+      case 'admin-models': return <AdminModelsPage />;
+      case 'admin-sizes': return <AdminSizesPage />;
+      case 'admin-quality': return <AdminQualityPage />;
+      case 'admin-users': return <AdminUsersPage nav={nav} />;
+      case 'admin-user-detail': return <AdminUserDetailPage nav={nav} />;
+      case 'admin-reports': return <AdminReportsPage />;
+      case 'admin-wallet': return <AdminWalletPage />;
+      case 'admin-packages': return <AdminPackagesPage />;
+      case 'admin-payments': return <AdminPaymentsPage />;
+      case 'admin-company': return <AdminCompanyPage />;
+      case 'admin-generations': return <AdminGenerationsPage />;
+      case 'admin-ratings': return <AdminRatingsPage />;
+      case 'admin-homepage': return <AdminHomepagePage nav={nav} />;
+      case 'admin-homepage-banners': return <AdminBannersPage nav={nav} />;
+      case 'admin-homepage-sections': return <AdminSectionsPage nav={nav} />;
+      case 'admin-settings': return <AdminSettingsPage />;
+      case 'admin-logs': return <AdminLogsPage />;
+      default: return <AdminDashPage nav={nav} />;
+    }
+  };
+
+  return (
+    <AdminShell page={page} nav={nav}>
+      {renderPage()}
+    </AdminShell>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<AdminApp />);
+</script>
+</body>
+</html>

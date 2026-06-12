@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Нэвтрэх — Creato</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#05050A;--sur:#0D0D14;--card:#12121C;--p:#7C3AED;--pl:#9D5FF5;--blue:#38BDF8;--pink:#EC4899;--t:#FFF;--tm:#A1A1AA;--tf:#52525B;--bdr:rgba(255,255,255,.08);--bdrh:rgba(255,255,255,.15);--r:16px;--rs:10px}
+body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--t);min-height:100vh;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.orb{position:fixed;border-radius:50%;filter:blur(100px);pointer-events:none}
+.o1{width:500px;height:500px;background:radial-gradient(circle,rgba(124,58,237,.14) 0%,transparent 70%);top:-200px;right:-100px}
+.o2{width:400px;height:400px;background:radial-gradient(circle,rgba(236,72,153,.08) 0%,transparent 70%);bottom:-100px;left:-100px}
+.page{width:100%;min-height:100vh;display:flex;flex-direction:column}
+/* Header */
+.auth-header{padding:20px 32px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--t);font-size:18px;font-weight:800;letter-spacing:-.5px}
+.logo-mark{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,var(--p),var(--pink));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;box-shadow:0 0 20px rgba(124,58,237,.5)}
+.logo-dot{color:var(--pl)}
+/* Card */
+.auth-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:24px;position:relative;z-index:1}
+.auth-card{width:100%;max-width:420px;background:rgba(13,13,20,.8);border:1px solid var(--bdr);border-radius:24px;padding:40px;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+.auth-title{font-size:26px;font-weight:800;letter-spacing:-1px;margin-bottom:6px}
+.auth-sub{font-size:14px;color:var(--tm);margin-bottom:32px;line-height:1.5}
+/* Form */
+.field{margin-bottom:18px}
+.field label{display:block;font-size:13px;font-weight:500;color:var(--tm);margin-bottom:7px}
+.field input{width:100%;background:rgba(255,255,255,.04);border:1px solid var(--bdr);border-radius:var(--rs);padding:12px 16px;font-family:inherit;font-size:15px;color:var(--t);outline:none;transition:border-color .2s,box-shadow .2s}
+.field input:focus{border-color:rgba(124,58,237,.5);box-shadow:0 0 0 3px rgba(124,58,237,.12)}
+.field input::placeholder{color:var(--tf)}
+.field-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px}
+.field-row label{margin:0;font-size:13px;font-weight:500;color:var(--tm)}
+.forgot{font-size:13px;color:var(--pl);text-decoration:none;font-weight:500}
+.forgot:hover{text-decoration:underline}
+.password-wrap{position:relative}
+.password-wrap input{padding-right:44px}
+.pw-toggle{position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--tm);cursor:pointer;font-size:16px;padding:4px;display:flex;align-items:center}
+.pw-toggle:hover{color:var(--t)}
+.btn-submit{width:100%;background:linear-gradient(135deg,#7C3AED,#6D28D9);color:#fff;border:none;border-radius:var(--rs);padding:14px;font-family:inherit;font-size:16px;font-weight:600;cursor:pointer;transition:all .2s;box-shadow:0 0 20px rgba(124,58,237,.35);margin-top:8px}
+.btn-submit:hover{background:linear-gradient(135deg,#8B5CF6,#7C3AED);box-shadow:0 0 32px rgba(124,58,237,.5);transform:translateY(-1px)}
+.btn-submit:active{transform:translateY(0)}
+.divider{display:flex;align-items:center;gap:12px;margin:24px 0;color:var(--tf);font-size:13px}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--bdr)}
+.social-btns{display:flex;gap:10px;margin-bottom:24px}
+.social-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;background:rgba(255,255,255,.05);border:1px solid var(--bdr);border-radius:var(--rs);padding:11px;font-size:14px;font-weight:500;color:var(--tm);cursor:pointer;transition:all .2s;text-decoration:none}
+.social-btn:hover{background:rgba(255,255,255,.1);border-color:var(--bdrh);color:var(--t)}
+.auth-footer{text-align:center;font-size:14px;color:var(--tm);margin-top:24px;padding-top:24px;border-top:1px solid var(--bdr)}
+.auth-footer a{color:var(--pl);text-decoration:none;font-weight:500}
+.auth-footer a:hover{text-decoration:underline}
+/* Checkbox */
+.check-row{display:flex;align-items:center;gap:10px;margin-bottom:18px}
+.check-row input[type=checkbox]{appearance:none;-webkit-appearance:none;width:18px;height:18px;border:2px solid rgba(255,255,255,.2);border-radius:5px;background:transparent;flex-shrink:0;cursor:pointer;position:relative;transition:all .16s}
+.check-row input[type=checkbox]:checked{background:var(--p);border-color:var(--p);box-shadow:0 0 8px rgba(124,58,237,.45)}
+.check-row input[type=checkbox]:checked::after{content:'';position:absolute;top:2px;left:5px;width:5px;height:9px;border:2px solid #fff;border-top:none;border-left:none;transform:rotate(45deg)}
+.check-row label{font-size:13px;color:var(--tm);cursor:pointer}
+/* Alert */
+.alert{background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.25);border-radius:var(--rs);padding:12px 14px;font-size:13px;color:var(--pl);margin-bottom:20px;display:flex;align-items:center;gap:8px}
+</style>
+</head>
+<body>
+<div class="orb o1"></div>
+<div class="orb o2"></div>
+<div class="page">
+  <div class="auth-header">
+    <a href="Homepage.html" class="logo">
+      Creato
+    </a>
+    <a href="Register.html" style="font-size:14px;color:var(--tm);text-decoration:none">Бүртгэл байхгүй юу? <span style="color:var(--pl);font-weight:500">Бүртгүүлэх →</span></a>
+  </div>
+  <div class="auth-wrap">
+    <div class="auth-card">
+      <h1 class="auth-title">Нэвтрэх</h1>
+      <p class="auth-sub">Creato-д тавтай морил. Prompt бичихгүйгээр AI зураг үүсгэ.</p>
+      <div class="social-btns">
+        <a href="#" class="social-btn">
+          <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+          Google-ээр нэвтрэх
+        </a>
+      </div>
+      <div class="divider">эсвэл</div>
+      <form onsubmit="handleLogin(event)">
+        <div class="field">
+          <label>Имэйл хаяг</label>
+          <input type="email" placeholder="tanii@email.mn" id="email" required>
+        </div>
+        <div class="field">
+          <div class="field-row">
+            <label>Нууц үг</label>
+            <a href="#" class="forgot">Нууц үг мартсан?</a>
+          </div>
+          <div class="password-wrap">
+            <input type="password" placeholder="Нууц үгээ оруулна уу" id="password" required>
+            <button type="button" class="pw-toggle" onclick="togglePw()">👁</button>
+          </div>
+        </div>
+        <div class="check-row">
+          <input type="checkbox" id="remember" checked>
+          <label for="remember">Намайг сана</label>
+        </div>
+        <button type="submit" class="btn-submit" id="submit-btn">Нэвтрэх</button>
+      </form>
+      <div class="auth-footer">
+        Бүртгэл байхгүй юу? <a href="Register.html">Бүртгүүлэх</a>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+function togglePw(){const i=document.getElementById('password');i.type=i.type==='password'?'text':'password'}
+function handleLogin(e){
+  e.preventDefault();
+  const btn=document.getElementById('submit-btn');
+  btn.textContent='Нэвтрэж байна...';
+  btn.disabled=true;
+  setTimeout(()=>{window.location.href='Client App.html'},1200);
+}
+</script>
+</body>
+</html>
