@@ -11,7 +11,8 @@ export class GeminiProvider implements ImageProvider {
   }
 
   async generate(opts: GenerateOptions): Promise<{ images: Buffer[] }> {
-    const model = opts.model || 'imagen-3.0-generate-002'
+    // Default to imagen-4.0-generate-001 — imagen-3.x not available on v1beta API
+    const model = opts.model || 'imagen-4.0-generate-001'
 
     const response = await this.client.models.generateImages({
       model,
