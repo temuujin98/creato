@@ -160,6 +160,8 @@ Generation engine-ийг хий:
 7. Unit test: prompt builder ([var] солилт, дутуу утга, mapping), credit reserve/spend/refund урсгал.
 ```
 
+> ⏳ TODO: image upload component (requires_image presets) — Phase 4C
+
 ---
 
 ## Phase 5 — Admin panel
