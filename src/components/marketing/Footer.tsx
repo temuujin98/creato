@@ -18,7 +18,7 @@ export default function Footer() {
                 { label: 'Facebook', href: '#', icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/></svg> },
                 { label: 'Instagram', href: '#', icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg> },
               ].map(s => (
-                <a key={s.label} href={s.href} aria-label={s.label} style={{ width: 34, height: 34, borderRadius: 9, background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8E8C9E', transition: 'all .2s', textDecoration: 'none' }}>
+                <a key={s.label} href={s.href} aria-label={s.label} className="ftr-social" style={{ width: 34, height: 34, borderRadius: 9, background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8E8C9E', textDecoration: 'none' }}>
                   {s.icon}
                 </a>
               ))}
@@ -29,9 +29,7 @@ export default function Footer() {
           <div>
             <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 2, color: '#4A4858', marginBottom: 16, fontFamily: "'Roboto Mono',monospace" }}>Бүтээгдэхүүн</div>
             {[['#presets', 'Presets'], ['#how', 'Яаж ажилладаг'], ['#showcase', 'Жишээ бүтээлүүд'], ['/presets', 'Бүх preset']].map(([href, label]) => (
-              <a key={href} href={href} style={{ display: 'block', fontSize: 13.5, color: '#8E8C9E', padding: '6px 0', textDecoration: 'none', transition: 'color .2s' }}
-                onMouseEnter={e => (e.target as HTMLElement).style.color = '#F5F4FA'}
-                onMouseLeave={e => (e.target as HTMLElement).style.color = '#8E8C9E'}>
+              <a key={href} href={href} className="ftr-link" style={{ display: 'block', fontSize: 13.5, color: '#8E8C9E', padding: '6px 0', textDecoration: 'none' }}>
                 {label}
               </a>
             ))}
@@ -40,9 +38,7 @@ export default function Footer() {
           <div>
             <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 2, color: '#4A4858', marginBottom: 16, fontFamily: "'Roboto Mono',monospace" }}>Компани</div>
             {[['#', 'Бидний тухай'], ['#', 'Блог'], ['#', 'Тусламж центр'], ['#help', 'FAQ']].map(([href, label]) => (
-              <a key={label} href={href} style={{ display: 'block', fontSize: 13.5, color: '#8E8C9E', padding: '6px 0', textDecoration: 'none', transition: 'color .2s' }}
-                onMouseEnter={e => (e.target as HTMLElement).style.color = '#F5F4FA'}
-                onMouseLeave={e => (e.target as HTMLElement).style.color = '#8E8C9E'}>
+              <a key={label} href={href} className="ftr-link" style={{ display: 'block', fontSize: 13.5, color: '#8E8C9E', padding: '6px 0', textDecoration: 'none' }}>
                 {label}
               </a>
             ))}
@@ -51,7 +47,7 @@ export default function Footer() {
           <div>
             <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 2, color: '#4A4858', marginBottom: 16, fontFamily: "'Roboto Mono',monospace" }}>Бүртгэл</div>
             {[['/login', 'Нэвтрэх'], ['/register', 'Бүртгүүлэх'], ['#', 'Тариф']].map(([href, label]) => (
-              <Link key={label} href={href} style={{ display: 'block', fontSize: 13.5, color: '#8E8C9E', padding: '6px 0', textDecoration: 'none', transition: 'color .2s' }}>
+              <Link key={label} href={href} className="ftr-link" style={{ display: 'block', fontSize: 13.5, color: '#8E8C9E', padding: '6px 0', textDecoration: 'none' }}>
                 {label}
               </Link>
             ))}
@@ -62,9 +58,7 @@ export default function Footer() {
           <p style={{ fontSize: 12, color: '#4A4858', margin: 0 }}>© {new Date().getFullYear()} Creato. Бүх эрх хуулиар хамгаалагдсан.</p>
           <div style={{ display: 'flex', gap: 20 }}>
             {[['#', 'Нууцлалын бодлого'], ['#', 'Үйлчилгээний нөхцөл']].map(([href, label]) => (
-              <a key={label} href={href} style={{ fontSize: 12, color: '#4A4858', textDecoration: 'none', transition: 'color .2s' }}
-                onMouseEnter={e => (e.target as HTMLElement).style.color = '#8E8C9E'}
-                onMouseLeave={e => (e.target as HTMLElement).style.color = '#4A4858'}>
+              <a key={label} href={href} className="ftr-bot-link" style={{ fontSize: 12, color: '#4A4858', textDecoration: 'none' }}>
                 {label}
               </a>
             ))}
@@ -76,6 +70,9 @@ export default function Footer() {
         .footer-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:40px}
         @media(max-width:900px){.footer-grid{grid-template-columns:1fr 1fr}}
         @media(max-width:500px){.footer-grid{grid-template-columns:1fr}}
+        .ftr-link{transition:color .2s}.ftr-link:hover{color:#F5F4FA!important}
+        .ftr-bot-link{transition:color .2s}.ftr-bot-link:hover{color:#8E8C9E!important}
+        .ftr-social{transition:all .2s}.ftr-social:hover{color:#F5F4FA!important;border-color:rgba(255,255,255,.15)!important}
       `}</style>
     </footer>
   )
