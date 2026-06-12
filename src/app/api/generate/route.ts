@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/server/supabase-admin'
 import { buildPrompt } from '@/server/prompt'
@@ -261,7 +262,10 @@ export async function POST(req: NextRequest) {
     if (signed?.signedUrl) signedUrls.push(signed.signedUrl)
   }
 
-  // 13. Whitelist response — no server-only fields
+  // 13. Bust /my-images cache so next navigation shows the new generation immediately
+  revalidatePath('/my-images')
+
+  // 14. Whitelist response — no server-only fields
   return safeResponse({
     id: generationId,
     status: 'completed',

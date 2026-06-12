@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import type { PresetPublic, PresetFieldPublic } from '@/types/preset'
 
@@ -27,6 +28,9 @@ interface GenResult {
 }
 
 export default function GenerateForm({ preset, fields, walletBalance }: GenerateFormProps) {
+  const router = useRouter()
+  // Optimistic local balance — updated immediately on success, router.refresh() syncs server
+  const [localBalance, setLocalBalance] = useState(walletBalance)
   const [inputs, setInputs] = useState<Record<string, string>>(() => {
     const init: Record<string, string> = {}
     for (const f of fields) init[f.field_key] = ''
@@ -40,7 +44,7 @@ export default function GenerateForm({ preset, fields, walletBalance }: Generate
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const creditCost = preset.credit_cost
-  const canAfford = walletBalance >= creditCost
+  const canAfford = localBalance >= creditCost
 
   const stopPolling = useCallback(() => {
     if (pollRef.current) {
@@ -59,6 +63,9 @@ export default function GenerateForm({ preset, fields, walletBalance }: Generate
         stateRef.current = 'done'
         setResult(data)
         setState('done')
+        // Optimistic balance update + refresh server components (sidebar wallet card)
+        setLocalBalance(prev => Math.max(0, prev - (data.creditCost ?? creditCost)))
+        router.refresh()
       } else if (data.status === 'failed') {
         stopPolling()
         stateRef.current = 'error'
@@ -110,6 +117,8 @@ export default function GenerateForm({ preset, fields, walletBalance }: Generate
         stateRef.current = 'done'
         setResult(data)
         setState('done')
+        setLocalBalance(prev => Math.max(0, prev - (data.creditCost ?? creditCost)))
+        router.refresh()
         return
       }
 
@@ -331,7 +340,7 @@ export default function GenerateForm({ preset, fields, walletBalance }: Generate
               <span style={{ color: '#9D5FF5' }}>{creditCost} cr</span>
             </div>
             <div style={{ fontSize: 12, color: canAfford ? '#52525B' : '#EF4444', marginBottom: 16 }}>
-              Үлдэгдэл: {walletBalance} credit{!canAfford && ' — хүрэлцэхгүй'}
+              Үлдэгдэл: {localBalance} credit{!canAfford && ' — хүрэлцэхгүй'}
             </div>
 
             {errorMsg && (
@@ -538,7 +547,7 @@ export default function GenerateForm({ preset, fields, walletBalance }: Generate
                   fontSize: 13,
                   color: '#4ADE80',
                 }}>
-                  ✓ {result.creditCost} credit зарцуулагдлаа · Үлдэгдэл: {walletBalance - result.creditCost} credit
+                  ✓ {result.creditCost} credit зарцуулагдлаа · Үлдэгдэл: {localBalance} credit
                 </div>
               </div>
             )}
