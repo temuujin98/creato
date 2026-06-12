@@ -128,6 +128,7 @@ const PAGE_TITLES: Record<string, string> = {
 function getPageTitle(pathname: string): string {
   if (PAGE_TITLES[pathname]) return PAGE_TITLES[pathname]
   // Handle dynamic routes like /presets/[slug]
+  if (pathname.endsWith('/generate')) return 'Зураг үүсгэх'
   if (pathname.startsWith('/presets/')) return 'Preset дэлгэрэнгүй'
   return 'Creato'
 }
