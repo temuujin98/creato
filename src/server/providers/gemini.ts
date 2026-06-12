@@ -15,6 +15,12 @@ export class GeminiProvider implements ImageProvider {
     // imagen-4.0-generate-001 returns 0 images (RAI/quota) on free-tier keys.
     const model = opts.model || 'imagen-4.0-fast-generate-001'
 
+    // Image-to-image: Imagen doesn't support reference images — use gemini-2.0-flash
+    // which can understand an image and regenerate it with modified context.
+    if (opts.inputImageBuffers && opts.inputImageBuffers.length > 0) {
+      return this.generateWithImage(opts)
+    }
+
     const response = await this.client.models.generateImages({
       model,
       prompt: opts.prompt,
@@ -33,10 +39,46 @@ export class GeminiProvider implements ImageProvider {
     }
 
     if (images.length === 0) {
-      // Log RAI filter reason if present (server-only)
       const reason = response.generatedImages?.[0]?.raiFilteredReason
       throw new Error(reason ? `gemini_rai_filtered: ${reason}` : 'gemini_no_images_returned')
     }
+    return { images }
+  }
+
+  private async generateWithImage(opts: GenerateOptions): Promise<{ images: Buffer[] }> {
+    // gemini-2.0-flash-preview-image-generation supports image output
+    const buf = opts.inputImageBuffers![0]
+    const b64 = buf.toString('base64')
+
+    const response = await this.client.models.generateContent({
+      model: 'gemini-2.0-flash-preview-image-generation',
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            {
+              inlineData: {
+                mimeType: 'image/png',
+                data: b64,
+              },
+            },
+            { text: opts.prompt },
+          ],
+        },
+      ],
+      config: {
+        responseModalities: ['IMAGE', 'TEXT'],
+      },
+    })
+
+    const images: Buffer[] = []
+    for (const part of response.candidates?.[0]?.content?.parts ?? []) {
+      if (part.inlineData?.data) {
+        images.push(Buffer.from(part.inlineData.data, 'base64'))
+      }
+    }
+
+    if (images.length === 0) throw new Error('gemini_no_images_returned_img2img')
     return { images }
   }
 }

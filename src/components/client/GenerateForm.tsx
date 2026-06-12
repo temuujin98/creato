@@ -270,27 +270,42 @@ export default function GenerateForm({ preset, fields, walletBalance, userId }: 
                       ))}
                     </div>
                   ) : f.input_type === 'select' && f.choices ? (
-                    <select
-                      value={inputs[f.field_key] ?? ''}
-                      onChange={e => setInputs(prev => ({ ...prev, [f.field_key]: e.target.value }))}
-                      style={{
-                        width: '100%',
-                        background: 'rgba(255,255,255,.05)',
-                        border: '1px solid rgba(255,255,255,.08)',
-                        borderRadius: 8,
-                        padding: '10px 14px',
-                        color: '#fff',
-                        fontSize: 14,
-                        outline: 'none',
-                        fontFamily: 'inherit',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      <option value="">Сонгох...</option>
-                      {(Array.isArray(f.choices) ? f.choices : []).map((ch: string) => (
-                        <option key={ch} value={ch}>{ch}</option>
-                      ))}
-                    </select>
+                    <div style={{ position: 'relative' }}>
+                      <select
+                        value={inputs[f.field_key] ?? ''}
+                        onChange={e => setInputs(prev => ({ ...prev, [f.field_key]: e.target.value }))}
+                        style={{
+                          width: '100%',
+                          background: '#1C1C2E',
+                          border: `1px solid ${inputs[f.field_key] ? 'rgba(124,58,237,.4)' : 'rgba(255,255,255,.1)'}`,
+                          borderRadius: 8,
+                          padding: '10px 36px 10px 14px',
+                          color: inputs[f.field_key] ? '#E4E4E7' : '#52525B',
+                          fontSize: 14,
+                          outline: 'none',
+                          fontFamily: 'inherit',
+                          cursor: 'pointer',
+                          appearance: 'none',
+                          WebkitAppearance: 'none',
+                          MozAppearance: 'none',
+                          transition: 'border-color .15s',
+                        }}
+                      >
+                        <option value="" style={{ color: '#52525B', background: '#1C1C2E' }}>Сонгох...</option>
+                        {(Array.isArray(f.choices) ? f.choices : []).map((ch: string) => (
+                          <option key={ch} value={ch} style={{ color: '#E4E4E7', background: '#1C1C2E' }}>{ch}</option>
+                        ))}
+                      </select>
+                      <div style={{
+                        position: 'absolute',
+                        right: 12,
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        pointerEvents: 'none',
+                        color: '#7C3AED',
+                        fontSize: 10,
+                      }}>▼</div>
+                    </div>
                   ) : (
                     <input
                       type={f.input_type === 'number' ? 'number' : 'text'}

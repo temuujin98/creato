@@ -215,13 +215,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Credit хадгалахад алдаа гарлаа' }, { status: 500 })
   }
 
-  // 9. Run provider (retry + fallback)
-  // TODO Phase 4C image-to-image: when inputImagePaths.length > 0, download the files
-  // from Storage and pass buffers to Gemini (image+text parts) or OpenAI images.edit().
-  // Currently the compiled prompt already references the product context via text fields,
-  // so generation proceeds as text-to-image and the reference images are stored for future use.
-  if (inputImagePaths.length > 0) {
-    console.log(`[generate] preset requires_image — ${inputImagePaths.length} input(s) stored, text-to-image mode for now`)
+  // 9. Download input images from Storage when requires_image=true
+  let inputImageBuffers: Buffer[] = []
+  if (preset.requires_image && inputImagePaths.length > 0) {
+    for (const storagePath of inputImagePaths) {
+      const { data: fileData, error: dlErr } = await admin.storage
+        .from('uploads')
+        .download(storagePath)
+      if (dlErr || !fileData) {
+        await admin.from('generations').update({ status: 'failed', error_message: 'input_image_download_failed' }).eq('id', generationId)
+        await admin.rpc('refund_credits', { p_generation: generationId })
+        return NextResponse.json({ error: 'Оруулсан зургийг уншихад алдаа гарлаа. Credit буцаагдлаа.' }, { status: 500 })
+      }
+      const arrayBuf = await fileData.arrayBuffer()
+      inputImageBuffers.push(Buffer.from(arrayBuf))
+    }
+    console.log(`[generate] image-to-image: ${inputImageBuffers.length} input buffer(s) ready`)
   }
 
   let providerResult: Awaited<ReturnType<typeof runWithRetry>>
@@ -237,6 +246,7 @@ export async function POST(req: NextRequest) {
       size: selectedSize,
       outputCount: preset.output_count,
       inputImagePaths,
+      inputImageBuffers,
     })
   } catch (err) {
     // All providers failed → refund

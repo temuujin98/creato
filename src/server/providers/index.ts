@@ -15,6 +15,7 @@ interface RunWithRetryOptions extends Omit<GenerateOptions, 'model'> {
   fallbackModel: string | null
   retryLimit: number
   inputImagePaths?: string[]
+  inputImageBuffers?: Buffer[]
 }
 
 export interface ProviderResult {
@@ -35,6 +36,7 @@ export async function runWithRetry(opts: RunWithRetryOptions): Promise<ProviderR
     model: primaryModel,
     size: opts.size,
     outputCount: opts.outputCount,
+    inputImageBuffers: opts.inputImageBuffers,
   }
 
   // Primary attempts — provider constructed inside loop so constructor errors are caught

@@ -16,10 +16,10 @@ const GRAD_THUMBS = [
 ]
 
 const TABS = [
+  { id: 'all', label: 'Бүгд' },
   { id: 'featured', label: 'Онцлох' },
   { id: 'new', label: 'Шинэ' },
   { id: 'trending', label: 'Тренд' },
-  { id: 'all', label: 'Бүгд' },
 ]
 
 interface PresetsClientProps {
@@ -28,7 +28,7 @@ interface PresetsClientProps {
 
 export default function PresetsClient({ presets }: PresetsClientProps) {
   const router = useRouter()
-  const [tab, setTab] = useState<'featured' | 'new' | 'trending' | 'all'>('featured')
+  const [tab, setTab] = useState<'featured' | 'new' | 'trending' | 'all'>('all')
   const [category, setCategory] = useState('Бүгд')
   const [query, setQuery] = useState('')
 
