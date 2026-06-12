@@ -17,12 +17,12 @@ export class OpenAIProvider implements ImageProvider {
   }
 
   async generate(opts: GenerateOptions): Promise<{ images: Buffer[] }> {
-    const model = opts.model || 'dall-e-3'
+    // gpt-image-1 is the current OpenAI image generation model.
+    // dall-e-3 is deprecated and no longer available on newer API versions.
+    const model = opts.model || 'gpt-image-1'
     const size = toOpenAISize(opts.size)
-    // DALL-E 3 only supports n=1; other models support up to 10
-    const n = model === 'dall-e-3' ? 1 : Math.min(opts.outputCount, 10)
+    const n = Math.min(opts.outputCount, 10)
 
-    // Use URL response (default) — b64_json not supported by gpt-image-1
     const response = await this.client.images.generate({
       model,
       prompt: opts.prompt,
@@ -32,11 +32,14 @@ export class OpenAIProvider implements ImageProvider {
 
     const images: Buffer[] = []
     for (const item of response.data ?? []) {
-      if (item.url) {
+      if (item.b64_json) {
+        // gpt-image-1 returns b64_json by default
+        images.push(Buffer.from(item.b64_json, 'base64'))
+      } else if (item.url) {
+        // Fallback: fetch from URL
         const res = await fetch(item.url)
         if (!res.ok) throw new Error(`openai_image_fetch_failed: ${res.status}`)
-        const arrayBuf = await res.arrayBuffer()
-        images.push(Buffer.from(arrayBuf))
+        images.push(Buffer.from(await res.arrayBuffer()))
       }
     }
 

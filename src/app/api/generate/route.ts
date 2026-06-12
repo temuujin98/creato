@@ -201,9 +201,11 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     // All providers failed → refund
     const errMsg = err instanceof Error ? err.message : 'provider_error'
+    // attempt_count: runWithRetry throws after exhausting retryLimit+1 + 1 fallback
+    const failedAttempts = (preset.retry_limit ?? 1) + 2
     await admin
       .from('generations')
-      .update({ status: 'failed', error_message: errMsg })
+      .update({ status: 'failed', error_message: errMsg, attempt_count: failedAttempts })
       .eq('id', generationId)
     await admin.rpc('refund_credits', { p_generation: generationId })
     // Return generic error — do NOT expose errMsg to client

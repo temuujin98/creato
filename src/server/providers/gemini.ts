@@ -11,8 +11,9 @@ export class GeminiProvider implements ImageProvider {
   }
 
   async generate(opts: GenerateOptions): Promise<{ images: Buffer[] }> {
-    // Default to imagen-4.0-generate-001 — imagen-3.x not available on v1beta API
-    const model = opts.model || 'imagen-4.0-generate-001'
+    // imagen-4.0-fast-generate-001 works reliably on Google AI Studio keys.
+    // imagen-4.0-generate-001 returns 0 images (RAI/quota) on free-tier keys.
+    const model = opts.model || 'imagen-4.0-fast-generate-001'
 
     const response = await this.client.models.generateImages({
       model,
@@ -31,7 +32,11 @@ export class GeminiProvider implements ImageProvider {
       }
     }
 
-    if (images.length === 0) throw new Error('gemini_no_images_returned')
+    if (images.length === 0) {
+      // Log RAI filter reason if present (server-only)
+      const reason = response.generatedImages?.[0]?.raiFilteredReason
+      throw new Error(reason ? `gemini_rai_filtered: ${reason}` : 'gemini_no_images_returned')
+    }
     return { images }
   }
 }
