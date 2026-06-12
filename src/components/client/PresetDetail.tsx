@@ -90,7 +90,7 @@ export default function PresetDetail({ preset, fields, isAuthenticated }: Preset
           <div style={{ background: '#12121C', border: '1px solid rgba(255,255,255,.08)', borderRadius: 16, padding: 24, marginBottom: 16 }}>
             <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 10 }}>Тайлбар</h3>
             <p style={{ fontSize: 14, color: '#A1A1AA', lineHeight: 1.7 }}>
-              {preset.long_description ?? preset.short_description ?? 'Тайлбар байхгүй байна.'}
+              {preset.full_description ?? preset.short_description ?? 'Тайлбар байхгүй байна.'}
             </p>
           </div>
 
@@ -103,9 +103,9 @@ export default function PresetDetail({ preset, fields, isAuthenticated }: Preset
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 600 }}>
                       {f.label}
-                      {f.is_required && <span style={{ color: '#EF4444', marginLeft: 4 }}>*</span>}
+                      {f.required && <span style={{ color: '#EF4444', marginLeft: 4 }}>*</span>}
                     </div>
-                    <div style={{ fontSize: 11, color: '#52525B', marginTop: 2 }}>{f.field_type}</div>
+                    <div style={{ fontSize: 11, color: '#52525B', marginTop: 2 }}>{f.input_type}</div>
                     {f.help_text && <div style={{ fontSize: 12, color: '#71717A', marginTop: 4 }}>{f.help_text}</div>}
                   </div>
                 </div>

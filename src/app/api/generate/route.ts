@@ -101,7 +101,7 @@ export async function POST(req: NextRequest) {
 
   const { data: fieldsRaw, error: fieldsErr } = await admin
     .from('preset_fields')
-    .select('field_key, prompt_mapping, required:is_required, input_type, is_active')
+    .select('field_key, prompt_mapping, required, input_type, is_active')
     .eq('preset_id', preset.id)
     .eq('is_active', true)
     .order('sort_order')
