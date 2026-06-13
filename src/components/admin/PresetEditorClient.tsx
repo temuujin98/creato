@@ -118,6 +118,84 @@ function Card({ children, style = {} }: { children: React.ReactNode; style?: Rea
   )
 }
 
+
+function Hint({ children, style = {} }: { children: React.ReactNode; style?: React.CSSProperties }) {
+  return (
+    <div style={{ fontSize: 11, color: '#52525B', marginTop: 5, lineHeight: 1.5, ...style }}>
+      {children}
+    </div>
+  )
+}
+
+function Req() {
+  return <span style={{ color: '#EF4444', marginLeft: 2 }}>*</span>
+}
+
+const SEL_S: React.CSSProperties = {
+  width: '100%',
+  background: '#12121A',
+  border: '1px solid rgba(255,255,255,.08)',
+  borderRadius: 8,
+  padding: '9px 32px 9px 12px',
+  color: '#E4E4E7',
+  fontSize: 13,
+  outline: 'none',
+  fontFamily: 'inherit',
+  boxSizing: 'border-box' as const,
+  appearance: 'none' as const,
+  WebkitAppearance: 'none' as const,
+  cursor: 'pointer',
+}
+
+function DarkSelect({ value, onChange, children, style = {} }: {
+  value: string
+  onChange: (v: string) => void
+  children: React.ReactNode
+  style?: React.CSSProperties
+}) {
+  return (
+    <div style={{ position: 'relative' }}>
+      <select
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        style={{ ...SEL_S, ...style }}
+      >
+        {children}
+      </select>
+      <span style={{
+        position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
+        pointerEvents: 'none', color: '#52525B', fontSize: 10,
+      }}>▼</span>
+    </div>
+  )
+}
+
+function CustomCheckbox({ checked, onChange, label }: {
+  checked: boolean
+  onChange: (v: boolean) => void
+  label: React.ReactNode
+}) {
+  return (
+    <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', userSelect: 'none' as const }}>
+      <span style={{
+        width: 16, height: 16, borderRadius: 4, flexShrink: 0,
+        background: checked ? '#7C3AED' : 'rgba(255,255,255,.04)',
+        border: checked ? '1px solid #7C3AED' : '1px solid rgba(255,255,255,.12)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        transition: 'all .12s',
+      }}>
+        {checked && (
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+            <path d="M2 5l2.5 2.5L8 2.5" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        )}
+        <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }} readOnly />
+      </span>
+      <span style={{ fontSize: 13, color: '#A1A1AA' }}>{label}</span>
+    </label>
+  )
+}
+
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return <div style={{ fontSize: 12, fontWeight: 700, color: '#71717A', textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 12, marginTop: 4 }}>{children}</div>
 }
@@ -253,15 +331,11 @@ function FieldAccordion({
             </Field>
             <Field flex={0} style={{ minWidth: 140 }}>
               <FL>Input Type</FL>
-              <select
-                style={INP_S}
-                value={local.input_type}
-                onChange={e => set('input_type', e.target.value)}
-              >
+              <DarkSelect value={local.input_type} onChange={v => set('input_type', v)}>
                 {['text','textarea','select','radio','checkbox','color','number','image','aspect_ratio'].map(t => (
                   <option key={t} value={t}>{t}</option>
                 ))}
-              </select>
+              </DarkSelect>
             </Field>
             <Field flex={0} style={{ minWidth: 80 }}>
               <FL>Sort</FL>
@@ -312,14 +386,8 @@ function FieldAccordion({
           </Row>
 
           <Row gap={16}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 7, cursor: 'pointer', fontSize: 13, color: '#A1A1AA' }}>
-              <input type="checkbox" checked={local.required} onChange={e => set('required', e.target.checked)} style={{ accentColor: '#7C3AED' }} />
-              Заавал
-            </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 7, cursor: 'pointer', fontSize: 13, color: '#A1A1AA' }}>
-              <input type="checkbox" checked={local.is_active} onChange={e => set('is_active', e.target.checked)} style={{ accentColor: '#7C3AED' }} />
-              Идэвхтэй
-            </label>
+            <CustomCheckbox checked={local.required} onChange={v => set('required', v)} label="Заавал" />
+            <CustomCheckbox checked={local.is_active} onChange={v => set('is_active', v)} label="Идэвхтэй" />
           </Row>
 
           <button
@@ -731,7 +799,7 @@ export default function PresetEditorClient({ id, preset, fields, categories }: P
         <div>
           <Row>
             <Field flex={2}>
-              <FL>Нэр *</FL>
+              <FL>Нэр <Req /></FL>
               <input style={INP_S} value={draft.name} onChange={e => set('name', e.target.value)} placeholder="Preset нэр" />
             </Field>
             <Field flex={2}>
@@ -748,16 +816,12 @@ export default function PresetEditorClient({ id, preset, fields, categories }: P
             </Field>
             <Field flex={1}>
               <FL>Ангилал</FL>
-              <select
-                style={INP_S}
-                value={draft.category_id}
-                onChange={e => set('category_id', e.target.value)}
-              >
+              <DarkSelect value={draft.category_id} onChange={v => set('category_id', v)}>
                 <option value="">— Сонгох —</option>
                 {categories.map(c => (
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
-              </select>
+              </DarkSelect>
             </Field>
           </Row>
 
@@ -785,11 +849,11 @@ export default function PresetEditorClient({ id, preset, fields, categories }: P
           <Row>
             <Field flex={1}>
               <FL>Статус</FL>
-              <select style={INP_S} value={draft.status} onChange={e => set('status', e.target.value)}>
+              <DarkSelect value={draft.status} onChange={v => set('status', v)}>
                 {Object.entries(STATUS_LABELS).map(([v, l]) => (
                   <option key={v} value={v}>{l}</option>
                 ))}
-              </select>
+              </DarkSelect>
             </Field>
             <Field flex={1}>
               <FL>Sort Order</FL>
@@ -800,15 +864,12 @@ export default function PresetEditorClient({ id, preset, fields, categories }: P
           <SectionTitle>Тэмдэглэгээ</SectionTitle>
           <Row gap={20}>
             {(['is_featured', 'is_trending', 'is_popular', 'is_new'] as const).map(flag => (
-              <label key={flag} style={{ display: 'flex', alignItems: 'center', gap: 7, cursor: 'pointer', fontSize: 13, color: '#A1A1AA' }}>
-                <input
-                  type="checkbox"
-                  checked={draft[flag]}
-                  onChange={e => set(flag, e.target.checked)}
-                  style={{ accentColor: '#7C3AED' }}
-                />
-                {{ is_featured: 'Онцлох', is_trending: 'Trending', is_popular: 'Алдартай', is_new: 'Шинэ' }[flag]}
-              </label>
+              <CustomCheckbox
+                key={flag}
+                checked={draft[flag]}
+                onChange={v => set(flag, v)}
+                label={{ is_featured: 'Онцлох', is_trending: 'Trending', is_popular: 'Алдартай', is_new: 'Шинэ' }[flag]}
+              />
             ))}
           </Row>
 
@@ -816,15 +877,11 @@ export default function PresetEditorClient({ id, preset, fields, categories }: P
           <SectionTitle>Зургийн шаардлага</SectionTitle>
 
           <Row>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: '#A1A1AA' }}>
-              <input
-                type="checkbox"
-                checked={draft.requires_image}
-                onChange={e => set('requires_image', e.target.checked)}
-                style={{ accentColor: '#7C3AED' }}
-              />
-              Зураг оруулах шаардлагатай
-            </label>
+            <CustomCheckbox
+              checked={draft.requires_image}
+              onChange={v => set('requires_image', v)}
+              label="Зураг оруулах шаардлагатай"
+            />
           </Row>
 
           {draft.requires_image && (
@@ -891,6 +948,7 @@ export default function PresetEditorClient({ id, preset, fields, categories }: P
                 accent="#4ADE80"
               />
             </Row>
+            <Hint>Үндсэн AI үйлчилгээ. Gemini хямд, OpenAI чанар сайн. Эхэлж үүгээр оролдоно.</Hint>
             <Row>
               <Field>
                 <FL>Primary Model</FL>
@@ -923,6 +981,7 @@ export default function PresetEditorClient({ id, preset, fields, categories }: P
                 accent="#FBBF24"
               />
             </Row>
+            <Hint>Үндсэн амжилтгүй бол энэ рүү шилжинэ. Хэрэглэгч асуудлыг мэдрэхгүй.</Hint>
             <Row>
               <Field>
                 <FL>Fallback Model</FL>
@@ -951,24 +1010,29 @@ export default function PresetEditorClient({ id, preset, fields, categories }: P
                     />
                   ))}
                 </div>
+              <Hint>Standard — хурдан, хямд. High — тэнцвэртэй. Premium — хамгийн сайн чанар, илүү credit зарцуулна.</Hint>
               </Field>
             </Row>
             <Row>
               <Field>
                 <FL>Retry Limit</FL>
-                <input style={INP_S} type="number" min={0} max={5} value={draft.retry_limit} onChange={e => set('retry_limit', Number(e.target.value))} />
+                <input style={INP_S} type="number" min={0} max={5} value={draft.retry_limit} onChange={e => set('retry_limit', Number(e.target.value))} onWheel={e => e.currentTarget.blur()} />
+                <Hint>Амжилтгүй болоход хэдэн удаа дахин оролдох. Ихэвчлэн 1-2.</Hint>
               </Field>
               <Field>
                 <FL>Output Count</FL>
-                <input style={INP_S} type="number" min={1} max={4} value={draft.output_count} onChange={e => set('output_count', Number(e.target.value))} />
+                <input style={INP_S} type="number" min={1} max={4} value={draft.output_count} onChange={e => set('output_count', Number(e.target.value))} onWheel={e => e.currentTarget.blur()} />
+                <Hint>Нэг удаад хэдэн зураг гаргах. Олон бол илүү credit зарцуулна.</Hint>
               </Field>
             </Row>
             <Row>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: '#A1A1AA' }}>
-                <input type="checkbox" checked={draft.cleanup_enabled} onChange={e => set('cleanup_enabled', e.target.checked)} style={{ accentColor: '#7C3AED' }} />
-                Cleanup идэвхжүүлэх
-              </label>
+              <CustomCheckbox
+                checked={draft.cleanup_enabled}
+                onChange={v => set('cleanup_enabled', v)}
+                label="Cleanup идэвхжүүлэх"
+              />
             </Row>
+            <Hint>AI-ийн нэмэлт artifact (буруу текст, гажуудал) цэвэрлэх дараагийн алхам. Чанар сайжруулна, бага зэрэг удаашруулна.</Hint>
             <div style={{ marginTop: 8 }}>
               <FL>Зөвшөөрөгдсөн хэмжээнүүд</FL>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -986,6 +1050,7 @@ export default function PresetEditorClient({ id, preset, fields, categories }: P
                   />
                 ))}
               </div>
+              <Hint>Хэрэглэгчид сонгож болох хэмжээнүүд. Хэмжээ нь зургийн композиц, текст байрлалд нөлөөлнө.</Hint>
             </div>
           </Card>
         </div>
@@ -1220,7 +1285,9 @@ export default function PresetEditorClient({ id, preset, fields, categories }: P
                 min={1}
                 value={draft.credit_cost}
                 onChange={e => set('credit_cost', Math.max(1, Number(e.target.value)))}
+                onWheel={e => e.currentTarget.blur()}
               />
+              <Hint style={{ marginTop: 8 }}>Энэ preset-ийг ашиглахад хэрэглэгчээс хасах credit.</Hint>
             </div>
           </Card>
 
@@ -1252,11 +1319,13 @@ export default function PresetEditorClient({ id, preset, fields, categories }: P
 
           <Card>
             <SectionTitle>Admin Override</SectionTitle>
+            <Hint>Авто тооцоог үл хэрэгсэж credit-ийг гараар тогтоох. Шалтгаан заавал бичнэ.</Hint>
             <Row>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: '#A1A1AA' }}>
-                <input type="checkbox" checked={draft.credit_override} onChange={e => set('credit_override', e.target.checked)} style={{ accentColor: '#7C3AED' }} />
-                Override идэвхжүүлэх
-              </label>
+              <CustomCheckbox
+                checked={draft.credit_override}
+                onChange={v => set('credit_override', v)}
+                label="Override идэвхжүүлэх"
+              />
             </Row>
             {draft.credit_override && (
               <Row>
