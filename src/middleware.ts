@@ -23,8 +23,22 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // Refresh session — required to keep user logged in
-  await supabase.auth.getUser()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  // Admin route protection — must have role='admin' in profiles
+  if (request.nextUrl.pathname.startsWith('/admin/') || request.nextUrl.pathname === '/admin') {
+    if (!user) {
+      return NextResponse.redirect(new URL('/login', request.url))
+    }
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+    if (profile?.role !== 'admin') {
+      return NextResponse.redirect(new URL('/dashboard', request.url))
+    }
+  }
 
   return supabaseResponse
 }
