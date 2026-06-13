@@ -11,8 +11,6 @@ function makeProvider(name: string | null | undefined): ImageProvider {
 interface RunWithRetryOptions extends Omit<GenerateOptions, 'model'> {
   primaryProvider: string
   primaryModel: string
-  fallbackProvider: string | null
-  fallbackModel: string | null
   retryLimit: number
   inputImagePaths?: string[]
   inputImageBuffers?: Buffer[]
@@ -25,8 +23,28 @@ export interface ProviderResult {
   attemptCount: number
 }
 
+// Friendly display names — safe to surface to clients (no internal config)
+const PROVIDER_LABELS: Record<string, string> = {
+  gemini: 'Google Gemini',
+  openai: 'OpenAI',
+}
+
+const MODEL_LABELS: Record<string, string> = {
+  'gemini-2.5-flash-image': 'Gemini 2.5 Flash Image',
+  'gemini-3-pro-image': 'Gemini 3 Pro Image',
+  'gpt-image-1': 'GPT Image 1',
+}
+
+export function providerLabel(provider: string): string {
+  return PROVIDER_LABELS[provider] ?? provider
+}
+
+export function modelLabel(model: string): string {
+  return MODEL_LABELS[model] ?? model
+}
+
 export async function runWithRetry(opts: RunWithRetryOptions): Promise<ProviderResult> {
-  const { primaryProvider, primaryModel, fallbackProvider, fallbackModel, retryLimit } = opts
+  const { primaryProvider, primaryModel, retryLimit } = opts
   const maxAttempts = retryLimit + 1
   let lastError: unknown
 
@@ -39,11 +57,10 @@ export async function runWithRetry(opts: RunWithRetryOptions): Promise<ProviderR
     inputImageBuffers: opts.inputImageBuffers,
   }
 
-  // Primary attempts — provider constructed inside loop so constructor errors are caught
   for (let i = 0; i < maxAttempts; i++) {
     try {
-      const primary = makeProvider(primaryProvider)
-      const result = await primary.generate(genOpts)
+      const provider = makeProvider(primaryProvider)
+      const result = await provider.generate(genOpts)
       return {
         images: result.images,
         providerUsed: primaryProvider,
@@ -52,30 +69,12 @@ export async function runWithRetry(opts: RunWithRetryOptions): Promise<ProviderR
       }
     } catch (err) {
       lastError = err
-      // Log server-side only — never reaches client
-      console.error(`[provider] ${primaryProvider} attempt ${i + 1}/${maxAttempts} failed:`, err instanceof Error ? err.message : err)
+      console.error(
+        `[provider] ${primaryProvider}/${primaryModel} attempt ${i + 1}/${maxAttempts} failed:`,
+        err instanceof Error ? err.message : err
+      )
     }
   }
 
-  // Fallback — single attempt
-  if (fallbackProvider) {
-    try {
-      const fallback = makeProvider(fallbackProvider)
-      const result = await fallback.generate({
-        ...genOpts,
-        model: fallbackModel ?? genOpts.model,
-      })
-      return {
-        images: result.images,
-        providerUsed: fallbackProvider,
-        modelUsed: fallbackModel ?? primaryModel,
-        attemptCount: maxAttempts + 1,
-      }
-    } catch (err) {
-      lastError = err
-      console.error(`[provider] fallback ${fallbackProvider} failed:`, err instanceof Error ? err.message : err)
-    }
-  }
-
-  throw lastError ?? new Error('all_providers_failed')
+  throw lastError ?? new Error('provider_exhausted')
 }

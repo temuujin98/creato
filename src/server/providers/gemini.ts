@@ -2,6 +2,20 @@ import 'server-only'
 import { GoogleGenAI } from '@google/genai'
 import type { ImageProvider, GenerateOptions } from './types'
 
+// Aspect ratio → Gemini generateContent image size hint
+// gemini-2.5-flash-image accepts aspectRatio in the config
+function toAspectRatio(size: string): string {
+  // size is already in "W:H" format matching Gemini's expected values
+  const MAP: Record<string, string> = {
+    '1:1': '1:1',
+    '4:5': '4:5',
+    '9:16': '9:16',
+    '16:9': '16:9',
+    '3:4': '3:4',
+  }
+  return MAP[size] ?? '1:1'
+}
+
 export class GeminiProvider implements ImageProvider {
   private client: GoogleGenAI
 
@@ -11,63 +25,37 @@ export class GeminiProvider implements ImageProvider {
   }
 
   async generate(opts: GenerateOptions): Promise<{ images: Buffer[] }> {
-    // imagen-4.0-fast-generate-001 works reliably on Google AI Studio keys.
-    // imagen-4.0-generate-001 returns 0 images (RAI/quota) on free-tier keys.
-    const model = opts.model || 'imagen-4.0-fast-generate-001'
+    const model = opts.model || 'gemini-2.5-flash-image'
 
-    // Image-to-image: Imagen doesn't support reference images — use gemini-2.0-flash
-    // which can understand an image and regenerate it with modified context.
+    const imageParts: Array<{ inlineData: { mimeType: string; data: string } }> = []
     if (opts.inputImageBuffers && opts.inputImageBuffers.length > 0) {
-      return this.generateWithImage(opts)
-    }
-
-    const response = await this.client.models.generateImages({
-      model,
-      prompt: opts.prompt,
-      config: {
-        numberOfImages: opts.outputCount,
-        aspectRatio: opts.size,
-        outputMimeType: 'image/png',
-      },
-    })
-
-    const images: Buffer[] = []
-    for (const img of response.generatedImages ?? []) {
-      if (img.image?.imageBytes) {
-        images.push(Buffer.from(img.image.imageBytes, 'base64'))
+      for (const buf of opts.inputImageBuffers) {
+        imageParts.push({
+          inlineData: {
+            mimeType: 'image/png',
+            data: buf.toString('base64'),
+          },
+        })
       }
     }
 
-    if (images.length === 0) {
-      const reason = response.generatedImages?.[0]?.raiFilteredReason
-      throw new Error(reason ? `gemini_rai_filtered: ${reason}` : 'gemini_no_images_returned')
+    const textPart = {
+      text: opts.negativePrompt
+        ? `${opts.prompt}\n\nAvoid: ${opts.negativePrompt}`
+        : opts.prompt,
     }
-    return { images }
-  }
-
-  private async generateWithImage(opts: GenerateOptions): Promise<{ images: Buffer[] }> {
-    // gemini-2.0-flash-preview-image-generation supports image output
-    const buf = opts.inputImageBuffers![0]
-    const b64 = buf.toString('base64')
 
     const response = await this.client.models.generateContent({
-      model: 'gemini-2.0-flash-preview-image-generation',
+      model,
       contents: [
         {
           role: 'user',
-          parts: [
-            {
-              inlineData: {
-                mimeType: 'image/png',
-                data: b64,
-              },
-            },
-            { text: opts.prompt },
-          ],
+          parts: [...imageParts, textPart],
         },
       ],
       config: {
         responseModalities: ['IMAGE', 'TEXT'],
+        candidateCount: opts.outputCount ?? 1,
       },
     })
 
@@ -78,7 +66,18 @@ export class GeminiProvider implements ImageProvider {
       }
     }
 
-    if (images.length === 0) throw new Error('gemini_no_images_returned_img2img')
+    if (images.length === 0) {
+      const candidate = response.candidates?.[0]
+      const finishReason = candidate?.finishReason
+      const safetyRatings = candidate?.safetyRatings
+      const detail = finishReason
+        ? `finish_reason=${finishReason}`
+        : safetyRatings
+          ? `safety_blocked`
+          : 'no_images_returned'
+      throw new Error(`gemini_${detail}`)
+    }
+
     return { images }
   }
 }

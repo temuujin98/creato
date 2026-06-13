@@ -607,7 +607,7 @@ function buildInitialDraft(preset: PresetRow | null, fields: FieldRow[]): Draft 
     internal_note: p?.internal_note ?? '',
     prompt_version: p?.prompt_version ?? 1,
     primary_provider: p?.primary_provider ?? 'gemini',
-    primary_model: p?.primary_model ?? '',
+    primary_model: p?.primary_model ?? 'gemini-2.5-flash-image',
     fallback_provider: p?.fallback_provider ?? '',
     fallback_model: p?.fallback_model ?? '',
     quality_preset: p?.quality_preset ?? 'standard',
@@ -1065,45 +1065,17 @@ export default function PresetEditorClient({ id, preset, fields, categories }: P
             <Row>
               <Field>
                 <FL>Primary Model</FL>
-                <input
-                  style={INP_S}
-                  value={draft.primary_model}
-                  onChange={e => set('primary_model', e.target.value)}
-                  placeholder={draft.primary_provider === 'gemini' ? 'imagen-4.0-fast-generate-001' : 'gpt-image-1'}
-                />
-                <div style={{ fontSize: 11, color: '#52525B', marginTop: 5 }}>
-                  Жишээ: {draft.primary_provider === 'gemini' ? 'imagen-4.0-fast-generate-001' : 'gpt-image-1'}
-                </div>
-              </Field>
-            </Row>
-          </Card>
-
-          <Card style={{ marginBottom: 16 }}>
-            <SectionTitle>Fallback Provider</SectionTitle>
-            <Row gap={8}>
-              <ChipToggle
-                label="Gemini"
-                active={draft.fallback_provider === 'gemini'}
-                onClick={() => set('fallback_provider', draft.fallback_provider === 'gemini' ? '' : 'gemini')}
-                accent="#FBBF24"
-              />
-              <ChipToggle
-                label="OpenAI"
-                active={draft.fallback_provider === 'openai'}
-                onClick={() => set('fallback_provider', draft.fallback_provider === 'openai' ? '' : 'openai')}
-                accent="#FBBF24"
-              />
-            </Row>
-            <Hint>Үндсэн амжилтгүй бол энэ рүү шилжинэ. Хэрэглэгч асуудлыг мэдрэхгүй.</Hint>
-            <Row>
-              <Field>
-                <FL>Fallback Model</FL>
-                <input
-                  style={INP_S}
-                  value={draft.fallback_model}
-                  onChange={e => set('fallback_model', e.target.value)}
-                  placeholder={draft.fallback_provider === 'openai' ? 'gpt-image-1' : 'imagen-4.0-fast-generate-001'}
-                />
+                <DarkSelect value={draft.primary_model} onChange={v => set('primary_model', v)}>
+                  {draft.primary_provider === 'openai' ? (
+                    <option value="gpt-image-1">gpt-image-1 — OpenAI, өндөр чанар</option>
+                  ) : (
+                    <>
+                      <option value="gemini-2.5-flash-image">gemini-2.5-flash-image — Хурдан, тогтвортой, хямд</option>
+                      <option value="gemini-3-pro-image">gemini-3-pro-image — Хамгийн сайн чанар</option>
+                    </>
+                  )}
+                </DarkSelect>
+                <Hint>Сонгосон provider-ийн ашиглах загвар. Gemini Flash нь хурдан бөгөөд найдвартай.</Hint>
               </Field>
             </Row>
           </Card>
@@ -1383,10 +1355,14 @@ export default function PresetEditorClient({ id, preset, fields, categories }: P
                   width: 140,
                   boxSizing: 'border-box',
                 }}
-                type="number"
-                min={1}
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 value={draft.credit_cost}
-                onChange={e => set('credit_cost', Math.max(1, Number(e.target.value)))}
+                onChange={e => {
+                  const v = e.target.value.replace(/[^0-9]/g, '')
+                  set('credit_cost', v === '' ? 1 : Math.max(1, Number(v)))
+                }}
                 onWheel={e => e.currentTarget.blur()}
               />
               <Hint style={{ marginTop: 8 }}>Энэ preset-ийг ашиглахад хэрэглэгчээс хасах credit.</Hint>

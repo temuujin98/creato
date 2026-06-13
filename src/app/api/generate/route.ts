@@ -3,18 +3,21 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/server/supabase-admin'
 import { buildPrompt } from '@/server/prompt'
-import { runWithRetry } from '@/server/providers'
+import { runWithRetry, providerLabel, modelLabel } from '@/server/providers'
 import { checkRateLimit } from '@/server/rate-limit'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
 
-// Whitelisted response shape — nothing server-only leaves this function
+// Whitelisted response shape — no server-only fields (prompt/config/cost) leave this function.
+// providerLabel/modelLabel are display-safe names only.
 function safeResponse(data: {
   id: string
   status: string
   outputSignedUrls: string[]
   creditCost: number
+  providerLabel: string
+  modelLabel: string
 }) {
   return NextResponse.json(data)
 }
@@ -84,8 +87,6 @@ export async function POST(req: NextRequest) {
     quality_prompt: string | null
     primary_provider: string
     primary_model: string | null
-    fallback_provider: string | null
-    fallback_model: string | null
   }
 
   const { data: presetRaw, error: presetErr } = await admin
@@ -94,7 +95,7 @@ export async function POST(req: NextRequest) {
       'id, slug, credit_cost, status, requires_image, min_image_count, max_image_count,' +
       'allowed_sizes, output_count, retry_limit,' +
       'base_prompt, negative_prompt, prompt_suffix, quality_prompt,' +
-      'primary_provider, primary_model, fallback_provider, fallback_model'
+      'primary_provider, primary_model'
     )
     .eq('slug', presetSlug)
     .eq('status', 'active')
@@ -239,9 +240,7 @@ export async function POST(req: NextRequest) {
       prompt: compiledPrompt,
       negativePrompt,
       primaryProvider: preset.primary_provider,
-      primaryModel: preset.primary_model ?? '',
-      fallbackProvider: preset.fallback_provider ?? null,
-      fallbackModel: preset.fallback_model ?? null,
+      primaryModel: preset.primary_model ?? 'gemini-2.5-flash-image',
       retryLimit: preset.retry_limit ?? 1,
       size: selectedSize,
       outputCount: preset.output_count,
@@ -249,15 +248,29 @@ export async function POST(req: NextRequest) {
       inputImageBuffers,
     })
   } catch (err) {
-    // All providers failed → refund
     const errMsg = err instanceof Error ? err.message : 'provider_error'
-    // attempt_count: runWithRetry throws after exhausting retryLimit+1 + 1 fallback
-    const failedAttempts = (preset.retry_limit ?? 1) + 2
+    const failedAttempts = (preset.retry_limit ?? 1) + 1
     await admin
       .from('generations')
       .update({ status: 'failed', error_message: errMsg, attempt_count: failedAttempts })
       .eq('id', generationId)
     await admin.rpc('refund_credits', { p_generation: generationId })
+    // Write audit log so /admin/logs shows generation failures
+    const isBillingError = /quota|billing|insufficient|rate.?limit/i.test(errMsg)
+    await admin.from('admin_audit_logs').insert({
+      admin_id: user.id, // using generating user id — admin_id FK allows any profile
+      action: isBillingError ? 'generation_billing_error' : 'generation_failed',
+      target_table: 'generations',
+      target_id: generationId,
+      payload: {
+        user_id: user.id,
+        preset_slug: presetSlug,
+        provider: preset.primary_provider,
+        model: preset.primary_model,
+        error: errMsg,
+        billing: isBillingError,
+      },
+    })
     // Return generic error — do NOT expose errMsg to client
     return NextResponse.json({ error: 'Зураг үүсгэхэд алдаа гарлаа. Credit буцаагдлаа.' }, { status: 500 })
   }
@@ -314,11 +327,13 @@ export async function POST(req: NextRequest) {
   // 13. Bust /my-images cache so next navigation shows the new generation immediately
   revalidatePath('/my-images')
 
-  // 14. Whitelist response — no server-only fields
+  // 14. Whitelist response — no server-only fields (prompt/config/cost excluded)
   return safeResponse({
     id: generationId,
     status: 'completed',
     outputSignedUrls: signedUrls,
     creditCost: preset.credit_cost,
+    providerLabel: providerLabel(providerResult.providerUsed),
+    modelLabel: modelLabel(providerResult.modelUsed),
   })
 }
