@@ -19,7 +19,7 @@ export default async function ClientLayout({ children }: { children: React.React
   const balance = wallet?.balance ?? 0
 
   return (
-    <ClientShell balance={balance}>
+    <ClientShell balance={balance} userEmail={user.email ?? ''}>
       {children}
     </ClientShell>
   )

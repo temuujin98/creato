@@ -25,18 +25,10 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Admin route protection — must have role='admin' in profiles
+  // Admin route protection — auth only; role check handled in (admin)/layout.tsx
   if (request.nextUrl.pathname.startsWith('/admin/') || request.nextUrl.pathname === '/admin') {
     if (!user) {
       return NextResponse.redirect(new URL('/login', request.url))
-    }
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-    if (profile?.role !== 'admin') {
-      return NextResponse.redirect(new URL('/dashboard', request.url))
     }
   }
 

@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 
 const NAV_ITEMS = [
   {
@@ -135,13 +136,21 @@ function getPageTitle(pathname: string): string {
 
 interface ClientShellProps {
   balance: number
+  userEmail: string
   children: React.ReactNode
 }
 
-export default function ClientShell({ balance, children }: ClientShellProps) {
+export default function ClientShell({ balance, userEmail, children }: ClientShellProps) {
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const pathname = usePathname()
+  const router = useRouter()
+
+  async function handleSignOut() {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push("/login")
+  }
 
   const sidebarWidth = collapsed ? 64 : 232
 
@@ -232,7 +241,7 @@ export default function ClientShell({ balance, children }: ClientShellProps) {
 
         {/* Wallet card (expanded only) */}
         {!collapsed && (
-          <div style={{ padding: '10px 10px 14px' }}>
+          <div style={{ padding: '10px 10px 0' }}>
             <div style={{
               background: 'linear-gradient(135deg,rgba(124,58,237,.14) 0%,rgba(109,40,217,.08) 100%)',
               borderRadius: 12,
@@ -273,6 +282,83 @@ export default function ClientShell({ balance, children }: ClientShellProps) {
             </div>
           </div>
         )}
+
+        {/* User / logout */}
+        <div style={{
+          borderTop: '1px solid rgba(255,255,255,.06)',
+          padding: collapsed ? '10px 8px' : '10px',
+          marginTop: 8,
+          flexShrink: 0,
+        }}>
+          {collapsed ? (
+            <button
+              onClick={handleSignOut}
+              title="Гарах"
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '10px',
+                borderRadius: 8,
+                background: 'transparent',
+                border: 'none',
+                color: '#52525B',
+                cursor: 'pointer',
+                transition: 'color .15s',
+              }}
+              onMouseOver={e => (e.currentTarget as HTMLElement).style.color = '#EF4444'}
+              onMouseOut={e => (e.currentTarget as HTMLElement).style.color = '#52525B'}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+              </svg>
+            </button>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{
+                width: 28, height: 28, borderRadius: '50%',
+                background: 'linear-gradient(135deg,#7C3AED,#38BDF8)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 11, fontWeight: 700, color: '#fff', flexShrink: 0,
+              }}>
+                {userEmail[0]?.toUpperCase() ?? 'U'}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 11, color: '#A1A1AA', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {userEmail}
+                </div>
+              </div>
+              <button
+                onClick={handleSignOut}
+                title="Гарах"
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#52525B',
+                  cursor: 'pointer',
+                  padding: '4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: 4,
+                  transition: 'color .15s',
+                  flexShrink: 0,
+                }}
+                onMouseOver={e => (e.currentTarget as HTMLElement).style.color = '#EF4444'}
+                onMouseOut={e => (e.currentTarget as HTMLElement).style.color = '#52525B'}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                  <polyline points="16 17 21 12 16 7"/>
+                  <line x1="21" y1="12" x2="9" y2="12"/>
+                </svg>
+              </button>
+            </div>
+          )}
+        </div>
       </aside>
 
       {/* Main area */}
