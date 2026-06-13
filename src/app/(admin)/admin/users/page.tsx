@@ -8,7 +8,7 @@ export default async function AdminUsersPage() {
 
   const { data: profiles } = await admin
     .from('profiles')
-    .select('id, full_name, email, role, created_at')
+    .select('id, display_name, email, role, created_at')
     .order('created_at', { ascending: false })
 
   const { data: wallets } = await admin
@@ -22,7 +22,7 @@ export default async function AdminUsersPage() {
 
   const rows = (profiles ?? []).map(p => ({
     id: p.id as string,
-    name: (p.full_name as string | null) ?? '—',
+    name: (p.display_name as string | null) ?? '—',
     email: p.email as string,
     role: p.role as string,
     balance: walletMap[p.id as string] ?? 0,
