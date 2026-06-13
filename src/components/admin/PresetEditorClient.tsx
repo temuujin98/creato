@@ -170,6 +170,119 @@ function DarkSelect({ value, onChange, children, style = {} }: {
   )
 }
 
+async function uploadFile(file: File, folder: string): Promise<string> {
+  const fd = new FormData()
+  fd.append('file', file)
+  fd.append('folder', folder)
+  const res = await fetch('/api/admin/upload', { method: 'POST', body: fd })
+  const json = await res.json() as { url?: string; error?: string }
+  if (!res.ok || json.error) throw new Error(json.error ?? 'Upload failed')
+  return json.url!
+}
+
+const DROPZONE_S: React.CSSProperties = {
+  border: '2px dashed rgba(255,255,255,.12)',
+  borderRadius: 10,
+  padding: 20,
+  textAlign: 'center',
+  cursor: 'pointer',
+  color: '#52525B',
+  fontSize: 12,
+  transition: 'border-color .15s, color .15s',
+}
+
+function ImageDropzone({ url, onUrl, folder, label }: {
+  url: string
+  onUrl: (url: string) => void
+  folder: string
+  label: string
+}) {
+  const [uploading, setUploading] = useState(false)
+  const [hovered, setHovered] = useState(false)
+  const [err, setErr] = useState('')
+  const inputRef = { current: null as HTMLInputElement | null }
+
+  async function handleFile(file: File) {
+    setUploading(true)
+    setErr('')
+    try {
+      const uploadedUrl = await uploadFile(file, folder)
+      onUrl(uploadedUrl)
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Upload алдаа')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  function onDrop(e: React.DragEvent) {
+    e.preventDefault()
+    const file = e.dataTransfer.files?.[0]
+    if (file) handleFile(file)
+  }
+
+  function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (file) handleFile(file)
+    e.target.value = ''
+  }
+
+  return (
+    <div>
+      <div
+        style={{
+          ...DROPZONE_S,
+          borderColor: hovered ? 'rgba(124,58,237,.4)' : 'rgba(255,255,255,.12)',
+          color: hovered ? '#A1A1AA' : '#52525B',
+        }}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        onClick={() => inputRef.current?.click()}
+        onDragOver={e => e.preventDefault()}
+        onDrop={onDrop}
+      >
+        <input
+          ref={el => { inputRef.current = el }}
+          type="file"
+          accept="image/*"
+          style={{ display: 'none' }}
+          onChange={onFileChange}
+        />
+        {uploading ? (
+          <span style={{ color: '#C4B5FD' }}>Байршуулж байна...</span>
+        ) : (
+          <>
+            <div style={{ marginBottom: 4 }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ display: 'inline-block', verticalAlign: 'middle', marginBottom: 4 }}><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            </div>
+            <div>Зураг чирж оруулах эсвэл дарж сонгох</div>
+          </>
+        )}
+      </div>
+      {err && <div style={{ fontSize: 11, color: '#EF4444', marginTop: 4 }}>{err}</div>}
+      {url && (
+        <div style={{ marginTop: 8 }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={url}
+            alt={label}
+            style={{ maxHeight: 100, maxWidth: '100%', borderRadius: 6, border: '1px solid rgba(255,255,255,.08)', objectFit: 'cover' }}
+            onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
+          />
+        </div>
+      )}
+      <div style={{ marginTop: 8 }}>
+        <input
+          style={INP_S}
+          value={url}
+          onChange={e => onUrl(e.target.value)}
+          placeholder="https://... (URL шууд оруулах)"
+        />
+      </div>
+    </div>
+  )
+}
+
 function CustomCheckbox({ checked, onChange, label }: {
   checked: boolean
   onChange: (v: boolean) => void
@@ -1179,40 +1292,29 @@ export default function PresetEditorClient({ id, preset, fields, categories }: P
         <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start', flexWrap: 'wrap' }}>
           <div style={{ flex: 2, minWidth: 300 }}>
             <Card style={{ marginBottom: 16 }}>
-              <SectionTitle>Thumbnail URL</SectionTitle>
-              <input
-                style={INP_S}
-                value={draft.thumbnail_url}
-                onChange={e => set('thumbnail_url', e.target.value)}
-                placeholder="https://... (Phase 5c-д upload нэмэгдэнэ)"
+              <SectionTitle>Thumbnail</SectionTitle>
+              <ImageDropzone
+                url={draft.thumbnail_url ?? ''}
+                onUrl={url => set('thumbnail_url', url)}
+                folder="presets/thumbnails"
+                label="Thumbnail зураг"
               />
-              {draft.thumbnail_url && (
-                <div style={{ marginTop: 10 }}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={draft.thumbnail_url}
-                    alt="thumbnail"
-                    style={{ width: '100%', maxHeight: 160, objectFit: 'cover', borderRadius: 8, border: '1px solid rgba(255,255,255,.08)' }}
-                    onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
-                  />
-                </div>
-              )}
             </Card>
 
             <Card>
               <SectionTitle>Жишээ зурагнуудын URL (max 4)</SectionTitle>
               {[0, 1, 2, 3].map(i => (
-                <div key={i} style={{ marginBottom: 10 }}>
+                <div key={i} style={{ marginBottom: 16 }}>
                   <FL>Зураг {i + 1}</FL>
-                  <input
-                    style={INP_S}
-                    value={(draft.example_image_urls[i] ?? '')}
-                    onChange={e => {
+                  <ImageDropzone
+                    url={draft.example_image_urls[i] ?? ''}
+                    onUrl={url => {
                       const next = [...draft.example_image_urls]
-                      next[i] = e.target.value
+                      next[i] = url
                       set('example_image_urls', next)
                     }}
-                    placeholder="https://..."
+                    folder="presets/examples"
+                    label={`Жишээ зураг ${i + 1}`}
                   />
                 </div>
               ))}

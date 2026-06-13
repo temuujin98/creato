@@ -53,36 +53,85 @@ async function getFeaturedPresets(): Promise<PresetPublicRow[]> {
   }
 }
 
+async function getVisibleSections(): Promise<Set<string>> {
+  try {
+    const cookieStore = await cookies()
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() { return cookieStore.getAll() },
+          setAll() {},
+        },
+      }
+    )
+    const { data, error } = await supabase
+      .from('homepage_sections')
+      .select('section_key, is_visible')
+      .order('sort_order', { ascending: true })
+    if (error || !data || data.length === 0) return new Set<string>()
+    return new Set(
+      (data as Array<{ section_key: string; is_visible: boolean }>)
+        .filter(s => s.is_visible)
+        .map(s => s.section_key)
+    )
+  } catch {
+    return new Set<string>()
+  }
+}
+
 export default async function HomePage() {
-  const presets = await getFeaturedPresets()
+  const [presets, visibleSections] = await Promise.all([
+    getFeaturedPresets(),
+    getVisibleSections(),
+  ])
+
+  // If fetch failed (empty set), default all sections to visible
+  const allKeys = ['hero', 'benefit_strip', 'featured_presets', 'how_it_works', 'showcase', 'creator_community', 'business_use_cases', 'faq', 'final_cta']
+  const vis = visibleSections.size > 0 ? visibleSections : new Set(allKeys)
 
   return (
     <>
       <Header />
       <main style={{ paddingTop: 66 }}>
-        <Hero />
-        <BenefitStrip />
-        <ScrollReveal>
-          <FeaturedPresets presets={presets} />
-        </ScrollReveal>
-        <ScrollReveal>
-          <HowItWorks />
-        </ScrollReveal>
-        <ScrollReveal>
-          <Showcase />
-        </ScrollReveal>
-        <ScrollReveal>
-          <CreatorCommunity />
-        </ScrollReveal>
-        <ScrollReveal>
-          <UseCases />
-        </ScrollReveal>
-        <ScrollReveal>
-          <FAQ />
-        </ScrollReveal>
-        <ScrollReveal>
-          <FinalCta />
-        </ScrollReveal>
+        {vis.has('hero') && <Hero />}
+        {vis.has('benefit_strip') && <BenefitStrip />}
+        {vis.has('featured_presets') && (
+          <ScrollReveal>
+            <FeaturedPresets presets={presets} />
+          </ScrollReveal>
+        )}
+        {vis.has('how_it_works') && (
+          <ScrollReveal>
+            <HowItWorks />
+          </ScrollReveal>
+        )}
+        {vis.has('showcase') && (
+          <ScrollReveal>
+            <Showcase />
+          </ScrollReveal>
+        )}
+        {vis.has('creator_community') && (
+          <ScrollReveal>
+            <CreatorCommunity />
+          </ScrollReveal>
+        )}
+        {vis.has('business_use_cases') && (
+          <ScrollReveal>
+            <UseCases />
+          </ScrollReveal>
+        )}
+        {vis.has('faq') && (
+          <ScrollReveal>
+            <FAQ />
+          </ScrollReveal>
+        )}
+        {vis.has('final_cta') && (
+          <ScrollReveal>
+            <FinalCta />
+          </ScrollReveal>
+        )}
       </main>
       <Footer />
     </>
